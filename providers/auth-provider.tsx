@@ -71,8 +71,25 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
       if (newSession?.user?.id) {
-        const p = await fetchProfile(newSession.user.id);
-        setProfile(p);
+        setIsLoading(true);
+        try {
+          // Brief delay so Supabase client is ready after OAuth session is set
+          await new Promise((r) => setTimeout(r, 300));
+          const userId = newSession.user.id;
+          const timeoutMs = 8000;
+          const p = await Promise.race([
+            fetchProfile(userId),
+            new Promise<null>((_, reject) =>
+              setTimeout(() => reject(new Error('fetchProfile timeout')), timeoutMs)
+            ),
+          ]);
+          setProfile(p);
+        } catch (err) {
+          log.auth('fetchProfile after OAuth failed', err instanceof Error ? err.message : String(err));
+          setProfile(null);
+        } finally {
+          setIsLoading(false);
+        }
       } else {
         setProfile(null);
       }

@@ -17,7 +17,7 @@ import { CheckoutCard } from '@/components/checkout-card';
 type ViewMode = 'yours' | 'everyone' | 'returned';
 
 export default function CheckoutsScreen() {
-  const { userProfileId } = useAuthContext();
+  const { userProfileId, isLoggedIn, isLoading: authLoading } = useAuthContext();
   const [checkouts, setCheckouts] = useState<CheckoutItem[]>([]);
   const [counts, setCounts] = useState({ active: 0, overdue: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('yours');
@@ -48,9 +48,15 @@ export default function CheckoutsScreen() {
   }, [viewMode, userProfileId]);
 
   useEffect(() => {
-    log.ui('Checkouts: mount, starting load');
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
+    log.ui('Checkouts: auth ready, starting load');
+    setLoading(true);
     load();
-  }, [load]);
+  }, [authLoading, isLoggedIn, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -58,7 +64,7 @@ export default function CheckoutsScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#2563eb" />

@@ -68,8 +68,13 @@ export function GitHubSignInButton() {
 
       let result: WebBrowser.WebBrowserAuthSessionResult;
 
+      const authSessionOptions = {
+        // Use ephemeral session so the browser doesn't reuse cookies from the previous sign-in.
+        // Without this, signing out then signing in again can fail (cached redirect / stale code).
+        preferEphemeralSession: true,
+      };
       if (Platform.OS === 'web') {
-        result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, authSessionOptions);
       } else {
         // Expo Go: open via proxy so redirect returns to app
         const proxyStartUrl = `${redirectTo}/start?${new URLSearchParams({
@@ -78,7 +83,8 @@ export function GitHubSignInButton() {
         }).toString()}`;
         result = await WebBrowser.openAuthSessionAsync(
           proxyStartUrl,
-          AuthSession.getDefaultReturnUrl()
+          AuthSession.getDefaultReturnUrl(),
+          authSessionOptions
         );
       }
 
@@ -100,6 +106,10 @@ export function GitHubSignInButton() {
       const sessionResult: SetSessionResult = await setSessionFromUrl(result.url);
 
       if (sessionResult.success) {
+        // Ensure client has session, then give AuthProvider time to process onAuthStateChange
+        // so the dashboard has session/profile when it mounts and data loads correctly.
+        await supabase.auth.getSession();
+        await new Promise((r) => setTimeout(r, 250));
         router.replace('/(tabs)');
         return;
       }

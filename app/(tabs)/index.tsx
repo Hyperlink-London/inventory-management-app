@@ -19,7 +19,7 @@ import { ItemCard } from '@/components/item-card';
 const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
 
 export default function DashboardScreen() {
-  const { userProfileId } = useAuthContext();
+  const { isLoggedIn, isLoading: authLoading } = useAuthContext();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,14 +40,20 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    logUi('Dashboard: mount, starting load');
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
+    logUi('Dashboard: auth ready, starting load');
+    setLoading(true);
     const timeout = setTimeout(() => {
       logUi('Dashboard: load timeout (8s)');
       setLoading(false);
     }, 8000);
     load();
     return () => clearTimeout(timeout);
-  }, [load]);
+  }, [authLoading, isLoggedIn, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -55,7 +61,7 @@ export default function DashboardScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#2563eb" />

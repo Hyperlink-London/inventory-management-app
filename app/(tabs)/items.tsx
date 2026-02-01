@@ -1,3 +1,4 @@
+import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { ItemCard } from '@/components/item-card';
 const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
 
 export default function ItemsScreen() {
+  const { isLoggedIn, isLoading: authLoading } = useAuthContext();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,15 @@ export default function ItemsScreen() {
   }, []);
 
   useEffect(() => {
-    logUi('Items: mount, starting load');
+    if (authLoading) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
+    logUi('Items: auth ready, starting load');
+    setLoading(true);
     load();
-  }, [load]);
+  }, [authLoading, isLoggedIn, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -47,7 +55,7 @@ export default function ItemsScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#2563eb" />

@@ -17,7 +17,8 @@ export function SignOutButton() {
           setLoading(true);
           await supabase.auth.signOut();
           setLoading(false);
-          router.replace('/login');
+          // Wait for auth state to clear before navigating so the next sign-in gets a clean state
+          setTimeout(() => router.replace('/login'), 100);
         },
       },
     ]);

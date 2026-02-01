@@ -1,11 +1,13 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import 'expo-crypto';
+import '@/lib/crypto-polyfill';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { SplashScreenController } from '@/components/splash-screen-controller';
@@ -40,7 +42,13 @@ function RootLayoutNav() {
 function ProtectedRoutes() {
   const { isLoggedIn, isLoading } = useAuthContext();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <View style={authLoadingStyles.centered}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -62,6 +70,10 @@ function ProtectedRoutes() {
     </Stack>
   );
 }
+
+const authLoadingStyles = StyleSheet.create({
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
