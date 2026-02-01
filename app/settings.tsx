@@ -1,37 +1,51 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { Feather } from '@expo/vector-icons';
-import { View, Text, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 export default function SettingsScreen() {
-  const { profile } = useAuthContext();
+  const { profile, isLoading } = useAuthContext();
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  const displayName = profile?.full_name || profile?.username || null;
+  const hasUsername = !!profile?.username;
+  const showUsernameRow = hasUsername && (!!profile?.full_name || displayName !== profile?.username);
 
   return (
-    <View style={styles.container}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.card}>
-            <View style={[styles.row, !(profile?.username && profile?.full_name) && styles.rowLast]}>
-              <Feather name="user" size={20} color="#666" />
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>
-                {profile?.full_name || profile?.username || '—'}
-              </Text>
-            </View>
-            {profile?.username && profile?.full_name && (
-              <View style={[styles.row, styles.rowLast]}>
-                <Feather name="at-sign" size={20} color="#666" />
-                <Text style={styles.label}>Username</Text>
-                <Text style={styles.value}>{profile.username}</Text>
-              </View>
-            )}
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.card}>
+          <View style={[styles.row, !showUsernameRow && styles.rowLast]}>
+            <Feather name="user" size={20} color="#666" />
+            <Text style={styles.label}>Name</Text>
+            <Text style={styles.value}>
+              {displayName ?? 'Not set'}
+            </Text>
           </View>
+          {showUsernameRow && (
+            <View style={[styles.row, styles.rowLast]}>
+              <Feather name="at-sign" size={20} color="#666" />
+              <Text style={styles.label}>Username</Text>
+              <Text style={styles.value}>{profile?.username ?? '—'}</Text>
+            </View>
+          )}
         </View>
       </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f8f9fa' },
+  scroll: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flexGrow: 1, padding: 16, paddingBottom: 32, backgroundColor: '#f8f9fa' },
   section: { marginBottom: 24 },
   sectionTitle: {
     fontSize: 13,

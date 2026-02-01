@@ -24,7 +24,10 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
   const [loading, setLoading] = useState(false);
 
   const isReturned = !!checkout.returned_date;
-  const canCheckIn = !isReturned && userProfileId !== null && checkout.recipient_id === userProfileId;
+  // Show Check In when user is the recipient, or when profile isn't loaded (backend validates)
+  const canCheckIn =
+    !isReturned &&
+    (userProfileId === null || checkout.recipient_id === userProfileId);
   const isOverdue =
     !isReturned &&
     !!checkout.expected_return_date &&
