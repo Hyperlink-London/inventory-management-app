@@ -14,6 +14,8 @@ import { CheckoutModal } from '@/components/checkout-modal';
 import { EditItemModal } from '@/components/edit-item-modal';
 import { ItemDetailView } from '@/components/item-detail-view';
 
+const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
+
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -24,13 +26,13 @@ export default function ItemDetailScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    log.ui('ItemDetail: load start', id);
+    logUi('ItemDetail: load start', id);
     try {
       const data = await fetchItemById(id);
-      log.ui('ItemDetail: load done', data ? 'found' : 'not found');
+      logUi('ItemDetail: load done', data ? 'found' : 'not found');
       setItem(data);
     } catch (err) {
-      log.ui('ItemDetail: load error', err);
+      logUi('ItemDetail: load error', err);
       setItem(null);
     } finally {
       setLoading(false);

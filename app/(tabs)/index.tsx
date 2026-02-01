@@ -16,6 +16,8 @@ import {
 import { AddItemButton } from '@/components/add-item-button';
 import { ItemCard } from '@/components/item-card';
 
+const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
+
 export default function DashboardScreen() {
   const { userProfileId } = useAuthContext();
   const router = useRouter();
@@ -24,13 +26,13 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    log.ui('Dashboard: load start');
+    logUi('Dashboard: load start');
     try {
       const data = await fetchItems();
-      log.ui('Dashboard: load done', data.length, 'items');
+      logUi('Dashboard: load done', data.length, 'items');
       setItems(data);
     } catch (err) {
-      log.ui('Dashboard: load error', err);
+      logUi('Dashboard: load error', err);
       setItems([]);
     } finally {
       setLoading(false);
@@ -38,9 +40,9 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    log.ui('Dashboard: mount, starting load');
+    logUi('Dashboard: mount, starting load');
     const timeout = setTimeout(() => {
-      log.ui('Dashboard: load timeout (8s)');
+      logUi('Dashboard: load timeout (8s)');
       setLoading(false);
     }, 8000);
     load();

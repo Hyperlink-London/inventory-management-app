@@ -14,6 +14,8 @@ import {
 import { AddItemButton } from '@/components/add-item-button';
 import { ItemCard } from '@/components/item-card';
 
+const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
+
 export default function ItemsScreen() {
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
@@ -21,13 +23,13 @@ export default function ItemsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    log.ui('Items: load start');
+    logUi('Items: load start');
     try {
       const data = await fetchItems();
-      log.ui('Items: load done', data.length, 'items');
+      logUi('Items: load done', data.length, 'items');
       setItems(data);
     } catch (err) {
-      log.ui('Items: load error', err);
+      logUi('Items: load error', err);
       setItems([]);
     } finally {
       setLoading(false);
@@ -35,7 +37,7 @@ export default function ItemsScreen() {
   }, []);
 
   useEffect(() => {
-    log.ui('Items: mount, starting load');
+    logUi('Items: mount, starting load');
     load();
   }, [load]);
 
