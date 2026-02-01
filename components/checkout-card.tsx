@@ -1,7 +1,8 @@
+import { useAuthContext } from '@/hooks/use-auth-context';
 import { checkInItem } from '@/lib/actions';
 import type { CheckoutItem } from '@/types';
-import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -19,9 +20,11 @@ type Props = {
 
 export function CheckoutCard({ checkout, onCheckIn }: Props) {
   const router = useRouter();
+  const { userProfileId } = useAuthContext();
   const [loading, setLoading] = useState(false);
 
   const isReturned = !!checkout.returned_date;
+  const canCheckIn = !isReturned && userProfileId !== null && checkout.recipient_id === userProfileId;
   const isOverdue =
     !isReturned &&
     !!checkout.expected_return_date &&
@@ -108,7 +111,7 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
         )}
       </View>
 
-      {!isReturned && (
+      {!isReturned && canCheckIn && (
         <Pressable
           onPress={handleCheckIn}
           disabled={loading}
