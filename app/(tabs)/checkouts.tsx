@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { fetchCheckoutCounts, fetchCheckouts } from '@/lib/data';
 import { log } from '@/lib/logger';
 import type { CheckoutItem } from '@/types';
@@ -25,6 +26,7 @@ const TAB_CONFIG: { key: ViewMode; label: string; icon: 'user' | 'users' | 'chec
 ];
 
 export default function CheckoutsScreen() {
+  const colors = useThemeColors();
   const { userProfileId, isLoggedIn, isLoading: authLoading } = useAuthContext();
   const [checkouts, setCheckouts] = useState<CheckoutItem[]>([]);
   const [counts, setCounts] = useState({ active: 0, overdue: 0 });
@@ -82,20 +84,20 @@ export default function CheckoutsScreen() {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.tint} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Checkouts</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Checkouts</Text>
         {(counts.active > 0 || counts.overdue > 0) && (
           <View style={styles.activeBadge}>
-            <View style={styles.activeDot} />
-            <Text style={styles.activeBadgeText}>{counts.active} Active</Text>
+            <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
+            <Text style={[styles.activeBadgeText, { color: colors.success }]}>{counts.active} Active</Text>
           </View>
         )}
       </View>
@@ -107,15 +109,21 @@ export default function CheckoutsScreen() {
             <Pressable
               key={key}
               onPress={() => setViewMode(key)}
-              style={[styles.tab, isActive && styles.tabActive]}
+              style={[styles.tab, isActive && { backgroundColor: colors.muted }]}
             >
               <Feather
                 name={icon}
                 size={18}
-                color={isActive ? '#111' : '#888'}
+                color={isActive ? colors.text : colors.mutedForeground}
                 style={styles.tabIcon}
               />
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: isActive ? colors.text : colors.mutedForeground },
+                  isActive && styles.tabTextActive,
+                ]}
+              >
                 {label}
               </Text>
             </Pressable>
@@ -132,11 +140,11 @@ export default function CheckoutsScreen() {
         renderItem={({ item }) => <CheckoutCard checkout={item} onCheckIn={load} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={styles.emptyIconWrap}>
-              <Feather name="corner-down-right" size={48} color="#ccc" />
+            <View style={[styles.emptyIconWrap, { backgroundColor: colors.muted }]}>
+              <Feather name="corner-down-right" size={48} color={colors.mutedForeground} />
             </View>
-            <Text style={styles.emptyTitle}>{emptyTitle}</Text>
-            <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyTitle}</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>{emptySubtitle}</Text>
           </View>
         }
         contentContainerStyle={isEmpty ? styles.listEmpty : undefined}
@@ -154,7 +162,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
     marginBottom: 8,
   },
   activeBadge: {
@@ -171,12 +178,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#16a34a',
   },
   activeBadgeText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#16a34a',
   },
   tabs: {
     flexDirection: 'row',
@@ -190,16 +195,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
   },
-  tabActive: {
-    backgroundColor: '#e5e7eb',
-  },
   tabIcon: { marginRight: 6 },
   tabText: {
     fontSize: 14,
-    color: '#888',
   },
   tabTextActive: {
-    color: '#111',
     fontWeight: '500',
   },
   empty: {
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#f0f0f0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -221,11 +220,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 15,
-    color: '#888',
   },
 });

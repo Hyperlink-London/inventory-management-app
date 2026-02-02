@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { fetchCheckoutCounts, fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -18,15 +19,18 @@ import { ItemCard } from '@/components/item-card';
 
 const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
 
-const HOME_ITEMS_LIMIT = 10;
+const INITIAL_PAGE_SIZE = 20;
+const LOAD_MORE_SIZE = 20;
 
 export default function DashboardScreen() {
   const { isLoggedIn, isLoading: authLoading, userProfileId } = useAuthContext();
+  const colors = useThemeColors();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
   const [counts, setCounts] = useState({ active: 0, overdue: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [displayCount, setDisplayCount] = useState(INITIAL_PAGE_SIZE);
 
   const load = useCallback(async () => {
     logUi('Dashboard: load start');
@@ -38,6 +42,7 @@ export default function DashboardScreen() {
       logUi('Dashboard: load done', itemsData.length, 'items');
       setItems(itemsData);
       setCounts(countData);
+      setDisplayCount(INITIAL_PAGE_SIZE);
     } catch (err) {
       logUi('Dashboard: load error', err);
       setItems([]);
@@ -68,33 +73,39 @@ export default function DashboardScreen() {
     setRefreshing(false);
   };
 
-  const pageItems = items.slice(0, HOME_ITEMS_LIMIT);
-  const hasMoreItems = items.length > HOME_ITEMS_LIMIT;
+  const visibleItems = items.slice(0, displayCount);
+  const hasMoreItems = displayCount < items.length;
+
+  const handleEndReached = useCallback(() => {
+    if (displayCount < items.length) {
+      setDisplayCount((prev) => Math.min(prev + LOAD_MORE_SIZE, items.length));
+    }
+  }, [displayCount, items.length]);
 
   const renderStatusSection = () => (
     <View style={styles.statusSection}>
-      <View style={styles.statusCard}>
+      <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.statusRow}>
           <View style={styles.statusItem}>
-            <Feather name="shopping-bag" size={22} color="#2563eb" />
-            <Text style={styles.statusValue}>{counts.active}</Text>
-            <Text style={styles.statusLabel}>Active</Text>
+            <Feather name="shopping-bag" size={22} color={colors.tint} />
+            <Text style={[styles.statusValue, { color: colors.text }]}>{counts.active}</Text>
+            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Active</Text>
           </View>
-          <View style={styles.statusDivider} />
+          <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statusItem}>
-            <Feather name="alert-circle" size={22} color={counts.overdue > 0 ? '#dc2626' : '#666'} />
-            <Text style={[styles.statusValue, counts.overdue > 0 && styles.statusValueOverdue]}>
+            <Feather name="alert-circle" size={22} color={counts.overdue > 0 ? colors.destructive : colors.mutedForeground} />
+            <Text style={[styles.statusValue, counts.overdue > 0 && { color: colors.destructive }]}>
               {counts.overdue}
             </Text>
-            <Text style={styles.statusLabel}>Overdue</Text>
+            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Overdue</Text>
           </View>
         </View>
         <Pressable
           onPress={() => router.push('/(tabs)/checkouts')}
-          style={({ pressed }) => [styles.statusLink, pressed && styles.statusLinkPressed]}
+          style={({ pressed }) => [styles.statusLink, { borderTopColor: colors.border }, pressed && styles.statusLinkPressed]}
         >
-          <Text style={styles.statusLinkText}>View checkouts</Text>
-          <Feather name="chevron-right" size={18} color="#2563eb" />
+          <Text style={[styles.statusLinkText, { color: colors.tint }]}>View checkouts</Text>
+          <Feather name="chevron-right" size={18} color={colors.tint} />
         </Pressable>
       </View>
     </View>
@@ -102,29 +113,27 @@ export default function DashboardScreen() {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.tint} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
-        data={pageItems}
+        data={visibleItems}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderStatusSection}
         ListFooterComponent={
           hasMoreItems ? (
-            <Pressable
-              style={styles.viewAll}
-              onPress={() => router.push('/(tabs)/items')}
-            >
-              <Text style={styles.viewAllText}>View all {items.length} items</Text>
-              <Feather name="chevron-right" size={18} color="#2563eb" />
-            </Pressable>
+            <View style={styles.loadMoreFooter}>
+              <ActivityIndicator size="small" color={colors.tint} />
+            </View>
           ) : null
         }
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -137,10 +146,10 @@ export default function DashboardScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No items in inventory</Text>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No items in inventory</Text>
           </View>
         }
-        contentContainerStyle={pageItems.length === 0 ? styles.listEmpty : undefined}
+        contentContainerStyle={visibleItems.length === 0 ? styles.listEmpty : undefined}
       />
     </View>
   );
@@ -151,11 +160,9 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusSection: { marginBottom: 20 },
   statusCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#eee',
   },
   statusRow: {
     flexDirection: 'row',
@@ -169,11 +176,9 @@ const styles = StyleSheet.create({
   statusDivider: {
     width: 1,
     height: 36,
-    backgroundColor: '#eee',
   },
-  statusValue: { fontSize: 22, fontWeight: '700', color: '#111', marginTop: 4 },
-  statusValueOverdue: { color: '#dc2626' },
-  statusLabel: { fontSize: 13, color: '#666', marginTop: 2 },
+  statusValue: { fontSize: 22, fontWeight: '700', marginTop: 4 },
+  statusLabel: { fontSize: 13, marginTop: 2 },
   statusLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -181,22 +186,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
     gap: 4,
   },
   statusLinkPressed: { opacity: 0.8 },
-  statusLinkText: { fontSize: 15, color: '#2563eb', fontWeight: '600' },
+  statusLinkText: { fontSize: 15, fontWeight: '600' },
   empty: { padding: 32, alignItems: 'center' },
-  emptyText: { fontSize: 16, color: '#666' },
+  emptyText: { fontSize: 16 },
   listEmpty: { flexGrow: 1 },
-  viewAll: {
-    flexDirection: 'row',
+  loadMoreFooter: {
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    gap: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
   },
-  viewAllText: { fontSize: 16, color: '#2563eb', fontWeight: '600' },
 });

@@ -1,11 +1,15 @@
 import { GitHubSignInButton } from '@/components/github-sign-in-button';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function LoginScreen() {
+  const colors = useThemeColors();
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Inventory Management</Text>
-      <Text style={styles.subtitle}>Sign in to manage your inventory</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.text }]}>Inventory Management</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+        Sign in to manage your inventory
+      </Text>
       <GitHubSignInButton />
     </View>
   );
@@ -17,17 +21,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    color: '#111',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 32,
   },
 });

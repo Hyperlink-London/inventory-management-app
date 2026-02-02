@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
@@ -8,6 +9,7 @@ import { AddItemModal } from './add-item-modal';
 type Props = { onSuccess?: () => void };
 
 export function AddItemButton({ onSuccess }: Props) {
+  const colors = useThemeColors();
   const router = useRouter();
   const [visible, setVisible] = useState(false);
 
@@ -20,10 +22,14 @@ export function AddItemButton({ onSuccess }: Props) {
     <>
       <Pressable
         onPress={() => setVisible(true)}
-        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          { backgroundColor: colors.primary },
+          pressed && styles.pressed,
+        ]}
       >
-        <Feather name="plus" size={18} color="#fff" />
-        <Text style={styles.text}>Add Item</Text>
+        <Feather name="plus" size={18} color={colors.primaryForeground} />
+        <Text style={[styles.text, { color: colors.primaryForeground }]}>Add Item</Text>
       </Pressable>
       <AddItemModal
         visible={visible}
@@ -39,11 +45,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#2563eb',
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 8,
   },
   pressed: { opacity: 0.9 },
-  text: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  text: { fontSize: 14, fontWeight: '600' },
 });

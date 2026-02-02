@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -20,33 +21,19 @@ import { ItemCard } from '@/components/item-card';
 
 const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
 
-const ITEMS_PER_PAGE = 10;
-
-type StatusFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
-
-function getAvailable(item: ItemWithTags) {
-  return item.quantity;
-}
-
-function matchesStatus(item: ItemWithTags, status: StatusFilter): boolean {
-  const available = getAvailable(item);
-  if (status === 'all') return true;
-  if (status === 'in_stock') return available >= 5;
-  if (status === 'low_stock') return available > 0 && available < 5;
-  if (status === 'out_of_stock') return available === 0;
-  return true;
-}
+const INITIAL_PAGE_SIZE = 20;
+const LOAD_MORE_SIZE = 20;
 
 export default function ItemsScreen() {
+  const colors = useThemeColors();
   const { isLoggedIn, isLoading: authLoading } = useAuthContext();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(INITIAL_PAGE_SIZE);
 
   const load = useCallback(async () => {
     logUi('Items: load start');
@@ -54,6 +41,7 @@ export default function ItemsScreen() {
       const data = await fetchItems();
       logUi('Items: load done', data.length, 'items');
       setItems(data);
+      setDisplayCount(INITIAL_PAGE_SIZE);
     } catch (err) {
       logUi('Items: load error', err);
       setItems([]);
@@ -97,90 +85,85 @@ export default function ItemsScreen() {
         const notesMatch = !!item.notes && item.notes.toLowerCase().includes(q);
         if (!nameMatch && !notesMatch) return false;
       }
-      if (!matchesStatus(item, statusFilter)) return false;
       if (selectedTagId !== null && !item.tags.some((t) => t.id === selectedTagId)) return false;
       return true;
     });
-  }, [items, searchQuery, statusFilter, selectedTagId]);
+  }, [items, searchQuery, selectedTagId]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
-  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageItems = useMemo(
-    () => filteredItems.slice(pageStart, pageStart + ITEMS_PER_PAGE),
-    [filteredItems, pageStart]
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, displayCount),
+    [filteredItems, displayCount]
   );
+  const hasMoreItems = displayCount < filteredItems.length;
 
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(1);
-  }, [currentPage, totalPages]);
+    setDisplayCount(INITIAL_PAGE_SIZE);
+  }, [searchQuery, selectedTagId]);
+
+  const handleEndReached = useCallback(() => {
+    if (displayCount < filteredItems.length) {
+      setDisplayCount((prev) => Math.min(prev + LOAD_MORE_SIZE, filteredItems.length));
+    }
+  }, [displayCount, filteredItems.length]);
 
   if (authLoading || loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.tint} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchWrap}>
-        <Feather name="search" size={18} color="#999" style={styles.searchIcon} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.searchWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+        <Feather name="search" size={18} color={colors.mutedForeground} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search by name or notes..."
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.mutedForeground}
           value={searchQuery}
-          onChangeText={(t) => {
-            setSearchQuery(t);
-            setCurrentPage(1);
-          }}
+          onChangeText={setSearchQuery}
         />
-      </View>
-
-      <View style={styles.filtersRow}>
-        <Text style={styles.filterLabel}>Status</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusChips}>
-          {(['all', 'in_stock', 'low_stock', 'out_of_stock'] as const).map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => {
-                setStatusFilter(s);
-                setCurrentPage(1);
-              }}
-              style={[styles.chip, statusFilter === s && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, statusFilter === s && styles.chipTextActive]}>
-                {s === 'all' ? 'All' : s === 'in_stock' ? 'In stock' : s === 'low_stock' ? 'Low stock' : 'Out'}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
       </View>
 
       {allTags.length > 0 && (
         <View style={styles.filtersRow}>
-          <Text style={styles.filterLabel}>Tag</Text>
+          <Text style={[styles.filterLabel, { color: colors.mutedForeground }]}>Tag</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagChips}>
             <Pressable
-              onPress={() => {
-                setSelectedTagId(null);
-                setCurrentPage(1);
-              }}
-              style={[styles.chip, selectedTagId === null && styles.chipActive]}
+              onPress={() => setSelectedTagId(null)}
+              style={[
+                styles.chip,
+                { backgroundColor: selectedTagId === null ? colors.primary : colors.muted },
+              ]}
             >
-              <Text style={[styles.chipText, selectedTagId === null && styles.chipTextActive]}>All</Text>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: selectedTagId === null ? colors.primaryForeground : colors.mutedForeground },
+                ]}
+              >
+                All
+              </Text>
             </Pressable>
             {allTags.map((tag) => (
               <Pressable
                 key={tag.id}
-                onPress={() => {
-                  setSelectedTagId(tag.id);
-                  setCurrentPage(1);
-                }}
-                style={[styles.chip, selectedTagId === tag.id && styles.chipActive]}
+                onPress={() => setSelectedTagId(tag.id)}
+                style={[
+                  styles.chip,
+                  { backgroundColor: selectedTagId === tag.id ? colors.primary : colors.muted },
+                ]}
               >
-                <Text style={[styles.chipText, selectedTagId === tag.id && styles.chipTextActive]}>{tag.name}</Text>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: selectedTagId === tag.id ? colors.primaryForeground : colors.mutedForeground },
+                  ]}
+                >
+                  {tag.name}
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -188,8 +171,17 @@ export default function ItemsScreen() {
       )}
 
       <FlatList
-        data={pageItems}
+        data={visibleItems}
         keyExtractor={(item) => item.id}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          hasMoreItems ? (
+            <View style={styles.loadMoreFooter}>
+              <ActivityIndicator size="small" color={colors.tint} />
+            </View>
+          ) : null
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -201,39 +193,13 @@ export default function ItemsScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               {filteredItems.length === 0 ? 'No items match your filters' : 'No items in inventory'}
             </Text>
           </View>
         }
+        contentContainerStyle={visibleItems.length === 0 ? styles.listEmpty : undefined}
       />
-
-      {filteredItems.length > 0 && (
-        <View style={styles.pagination}>
-          <Text style={styles.paginationLabel}>
-            {pageStart + 1}–{Math.min(pageStart + ITEMS_PER_PAGE, filteredItems.length)} of {filteredItems.length}
-          </Text>
-          <View style={styles.paginationBtns}>
-            <Pressable
-              onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              style={[styles.pageBtn, currentPage <= 1 && styles.pageBtnDisabled]}
-            >
-              <Text style={styles.pageBtnText}>Prev</Text>
-            </Pressable>
-            <Text style={styles.pageNum}>
-              Page {currentPage} of {totalPages}
-            </Text>
-            <Pressable
-              onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              style={[styles.pageBtn, currentPage >= totalPages && styles.pageBtnDisabled]}
-            >
-              <Text style={styles.pageBtnText}>Next</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -260,7 +226,6 @@ const styles = StyleSheet.create({
   },
   filtersRow: { marginBottom: 10 },
   filterLabel: { fontSize: 12, fontWeight: '600', color: '#666', marginBottom: 6 },
-  statusChips: { flexDirection: 'row', gap: 8 },
   tagChips: { flexDirection: 'row', gap: 8 },
   chip: {
     paddingHorizontal: 12,
@@ -268,29 +233,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#eee',
   },
-  chipActive: { backgroundColor: '#2563eb' },
   chipText: { fontSize: 14, color: '#444', fontWeight: '500' },
-  chipTextActive: { color: '#fff' },
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { fontSize: 16, color: '#666' },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  listEmpty: { flexGrow: 1 },
+  loadMoreFooter: {
+    paddingVertical: 16,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    justifyContent: 'center',
   },
-  paginationLabel: { fontSize: 14, color: '#666' },
-  paginationBtns: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  pageBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
-  },
-  pageBtnDisabled: { opacity: 0.5 },
-  pageBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  pageNum: { fontSize: 14, color: '#666' },
 });

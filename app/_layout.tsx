@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider } from '@react-navigation/native';
 import 'expo-crypto';
 import '@/lib/crypto-polyfill';
 import { useFonts } from 'expo-font';
@@ -14,7 +14,8 @@ import { SplashScreenController } from '@/components/splash-screen-controller';
 
 // Required for OAuth: dismisses the auth browser when redirect returns to the app
 WebBrowser.maybeCompleteAuthSession();
-import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { AppDarkTheme } from '@/constants/Theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import AuthProvider from '@/providers/auth-provider';
 
@@ -27,10 +28,8 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={AppDarkTheme}>
       <AuthProvider>
         <SplashScreenController />
         <ProtectedRoutes />
@@ -45,7 +44,7 @@ function ProtectedRoutes() {
   if (isLoading) {
     return (
       <View style={authLoadingStyles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={Colors.dark.tint} />
       </View>
     );
   }
@@ -80,7 +79,12 @@ function ProtectedRoutes() {
 }
 
 const authLoadingStyles = StyleSheet.create({
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.dark.background,
+  },
 });
 
 export default function RootLayout() {

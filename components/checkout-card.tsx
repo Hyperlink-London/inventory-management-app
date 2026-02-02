@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { checkInItem } from '@/lib/actions';
 import type { CheckoutItem } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function CheckoutCard({ checkout, onCheckIn }: Props) {
+  const colors = useThemeColors();
   const router = useRouter();
   const { userProfileId } = useAuthContext();
   const [loading, setLoading] = useState(false);
@@ -66,49 +68,53 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
   return (
     <Pressable
       onPress={() => router.push(`/item/${checkout.item_id}`)}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.row}>
         <View style={styles.imageWrap}>
           {checkout.image_URL ? (
             <Image source={{ uri: checkout.image_URL }} style={styles.image} contentFit="cover" />
           ) : (
-            <View style={styles.placeholder}>
-              <Feather name="package" size={20} color="#999" />
+            <View style={[styles.placeholder, { backgroundColor: colors.muted }]}>
+              <Feather name="package" size={20} color={colors.mutedForeground} />
             </View>
           )}
         </View>
         <View style={styles.content}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
             {checkout.item_name}
           </Text>
-          <Text style={styles.recipient}>{checkout.recipient_full_name}</Text>
-          <Text style={styles.qty}>Qty: {checkout.quantity}</Text>
+          <Text style={[styles.recipient, { color: colors.mutedForeground }]}>{checkout.recipient_full_name}</Text>
+          <Text style={[styles.qty, { color: colors.mutedForeground }]}>Qty: {checkout.quantity}</Text>
         </View>
         <View style={styles.status}>
           {isReturned ? (
-            <View style={styles.badgeReturned}>
-              <Text style={styles.badgeReturnedText}>Returned</Text>
+            <View style={[styles.badgeReturned, { backgroundColor: colors.muted }]}>
+              <Text style={[styles.badgeReturnedText, { color: colors.mutedForeground }]}>Returned</Text>
             </View>
           ) : isOverdue ? (
             <View style={styles.badgeOverdue}>
-              <Text style={styles.badgeOverdueText}>Overdue</Text>
+              <Text style={[styles.badgeOverdueText, { color: colors.destructive }]}>Overdue</Text>
             </View>
           ) : (
             <View style={styles.badgeActive}>
-              <Text style={styles.badgeActiveText}>Active</Text>
+              <Text style={[styles.badgeActiveText, { color: colors.success }]}>Active</Text>
             </View>
           )}
         </View>
       </View>
 
       <View style={styles.dates}>
-        <Text style={styles.dateLabel}>Out: {formatDate(checkout.sign_out_date)}</Text>
-        <Text style={styles.dateLabel}>
+        <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>Out: {formatDate(checkout.sign_out_date)}</Text>
+        <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>
           Expected: {formatDate(checkout.expected_return_date)}
         </Text>
         {checkout.returned_date && (
-          <Text style={styles.dateLabel}>
+          <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>
             Returned: {formatDate(checkout.returned_date)}
           </Text>
         )}
@@ -118,9 +124,13 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
         <Pressable
           onPress={handleCheckIn}
           disabled={loading}
-          style={[styles.checkInBtn, loading && styles.checkInDisabled]}
+          style={[
+            styles.checkInBtn,
+            { backgroundColor: colors.primary },
+            loading && styles.checkInDisabled,
+          ]}
         >
-          <Text style={styles.checkInText}>
+          <Text style={[styles.checkInText, { color: colors.primaryForeground }]}>
             {loading ? 'Checking in...' : 'Check In'}
           </Text>
         </Pressable>
@@ -145,14 +155,13 @@ const styles = StyleSheet.create({
   placeholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: { flex: 1, marginLeft: 12, justifyContent: 'center' },
-  name: { fontSize: 16, fontWeight: '600', color: '#111' },
-  recipient: { fontSize: 14, color: '#666', marginTop: 2 },
-  qty: { fontSize: 13, color: '#888', marginTop: 2 },
+  name: { fontSize: 16, fontWeight: '600' },
+  recipient: { fontSize: 14, marginTop: 2 },
+  qty: { fontSize: 13, marginTop: 2 },
   status: { justifyContent: 'center' },
   badgeActive: {
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
@@ -160,30 +169,28 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
   },
-  badgeActiveText: { fontSize: 12, color: '#16a34a', fontWeight: '500' },
+  badgeActiveText: { fontSize: 12, fontWeight: '500' },
   badgeOverdue: {
     backgroundColor: 'rgba(220, 38, 38, 0.2)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  badgeOverdueText: { fontSize: 12, color: '#dc2626', fontWeight: '500' },
+  badgeOverdueText: { fontSize: 12, fontWeight: '500' },
   badgeReturned: {
-    backgroundColor: '#f0f0f0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  badgeReturnedText: { fontSize: 12, color: '#666' },
+  badgeReturnedText: { fontSize: 12 },
   dates: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  dateLabel: { fontSize: 13, color: '#666' },
+  dateLabel: { fontSize: 13 },
   checkInBtn: {
     marginTop: 12,
-    backgroundColor: '#2563eb',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
   checkInDisabled: { opacity: 0.7 },
-  checkInText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  checkInText: { fontSize: 14, fontWeight: '600' },
 });

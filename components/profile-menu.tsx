@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { supabase } from '@/lib/supabase';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 
 export function ProfileMenu() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { profile } = useAuthContext();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -50,11 +52,15 @@ export function ProfileMenu() {
       <Pressable
         onPress={openMenu}
         disabled={signingOut}
-        style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
+        style={({ pressed }) => [
+          styles.trigger,
+          { backgroundColor: colors.muted },
+          pressed && styles.triggerPressed,
+        ]}
         accessibilityLabel="Profile menu"
       >
         <View style={styles.avatar}>
-          <Feather name="user" size={22} color="#2563eb" />
+          <Feather name="user" size={22} color={colors.tint} />
         </View>
       </Pressable>
 
@@ -66,28 +72,39 @@ export function ProfileMenu() {
       >
         <Pressable style={styles.overlay} onPress={closeMenu}>
           <View style={styles.menuContainer}>
-            <Pressable style={styles.menu} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.menuHeader}>
-                <View style={styles.avatarLarge}>
-                  <Feather name="user" size={28} color="#2563eb" />
+            <Pressable
+              style={[styles.menu, { backgroundColor: colors.card }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={[styles.menuHeader, { borderBottomColor: colors.border }]}>
+                <View style={[styles.avatarLarge, { backgroundColor: colors.muted }]}>
+                  <Feather name="user" size={28} color={colors.tint} />
                 </View>
-                <Text style={styles.menuName} numberOfLines={1}>
+                <Text style={[styles.menuName, { color: colors.text }]} numberOfLines={1}>
                   {displayName}
                 </Text>
               </View>
               <Pressable
                 onPress={handleSettings}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { backgroundColor: colors.muted },
+                ]}
               >
-                <Feather name="settings" size={20} color="#333" />
-                <Text style={styles.menuItemText}>Settings</Text>
+                <Feather name="settings" size={20} color={colors.mutedForeground} />
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Settings</Text>
               </Pressable>
               <Pressable
                 onPress={handleSignOut}
-                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { backgroundColor: colors.muted },
+                ]}
               >
-                <Feather name="log-out" size={20} color="#dc2626" />
-                <Text style={[styles.menuItemText, styles.signOutText]}>Sign out</Text>
+                <Feather name="log-out" size={20} color={colors.destructive} />
+                <Text style={[styles.menuItemText, styles.signOutText, { color: colors.destructive }]}>
+                  Sign out
+                </Text>
               </Pressable>
             </Pressable>
           </View>
@@ -163,7 +180,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  menuItemPressed: { backgroundColor: '#f5f5f5' },
-  menuItemText: { fontSize: 16, color: '#333' },
-  signOutText: { color: '#dc2626', fontWeight: '500' },
+  menuItemText: { fontSize: 16 },
+  signOutText: { fontWeight: '500' },
 });

@@ -2,29 +2,44 @@ import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AddItemModalProvider, useAddItemModal } from '@/providers/add-item-modal-provider';
+import { HeaderLogo } from '@/components/header-logo';
 import { ProfileMenu } from '@/components/profile-menu';
+import { AddItemModalProvider, useAddItemModal } from '@/providers/add-item-modal-provider';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
 function PlusTabButton() {
   const { openAddItemModal } = useAddItemModal();
+  const colors = useThemeColors();
   return (
     <Pressable
       onPress={openAddItemModal}
-      style={({ pressed }) => [styles.addTabButton, pressed && styles.addTabPressed]}
+      style={({ pressed }) => [
+        styles.addTabButton,
+        { backgroundColor: colors.primary },
+        pressed && styles.addTabPressed,
+      ]}
     >
-      <Feather name="plus" size={28} color="#fff" />
+      <Feather name="plus" size={28} color={colors.primaryForeground} />
     </Pressable>
   );
 }
 
 export default function TabLayout() {
+  const colors = useThemeColors();
   return (
     <AddItemModalProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#2563eb',
+          tabBarActiveTintColor: colors.tabIconSelected,
+          tabBarInactiveTintColor: colors.tabIconDefault,
           headerShown: true,
+          headerTitle: () => <HeaderLogo />,
+          headerTitleAlign: 'left',
           headerRight: () => <ProfileMenu />,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
         }}
       >
         <Tabs.Screen
@@ -80,7 +95,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,

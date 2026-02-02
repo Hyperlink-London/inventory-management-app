@@ -1,3 +1,4 @@
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { fetchItemById } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { ItemDetailView } from '@/components/item-detail-view';
 const logUi = (...args: unknown[]) => __DEV__ && console.log('[UI]', ...args);
 
 export default function ItemDetailScreen() {
+  const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [item, setItem] = useState<ItemWithTags | null>(null);
@@ -53,23 +55,23 @@ export default function ItemDetailScreen() {
 
   if (loading || !id) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.tint} />
       </View>
     );
   }
 
   if (!item) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.error}>Item not found</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <Text style={[styles.error, { color: colors.mutedForeground }]}>Item not found</Text>
       </View>
     );
   }
 
   return (
     <>
-      <ScrollView style={styles.container}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
         <ItemDetailView
           item={item}
           onEdit={() => setEditModalVisible(true)}
