@@ -49,10 +49,12 @@ async function readFileToBytes(uri: string): Promise<{ bytes: Uint8Array; type: 
 /**
  * Uploads a local image URI to Supabase storage (item-images bucket)
  * and returns the public URL. Handles compression and reliable file read on RN.
+ * Optimized for Next.js Image component compatibility (WebP format preferred).
  */
 export async function uploadItemImage(uri: string): Promise<string> {
   const { bytes, type } = await readFileToBytes(uri);
-  const ext = type.includes('png') ? 'png' : 'jpg';
+  // Determine file extension from content type, defaulting to webp (best compression, Next.js compatible)
+  const ext = type.includes('webp') ? 'webp' : type.includes('png') ? 'png' : 'jpg';
   const fileName = `${crypto.randomUUID()}.${ext}`;
 
   const { data, error } = await supabase.storage

@@ -53,28 +53,73 @@ export async function updateItem(
 }
 
 export async function deleteItem(id: string) {
-  const { data: itemData } = await supabase
-    .from('items')
-    .select('image_URL')
-    .eq('id', id)
-    .single();
+  try {
+    // Verify session is valid
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('You must be logged in to delete an item');
+    }
 
-  if (itemData?.image_URL) {
-    try {
-      await supabase.rpc('delete_image_from_storage', {
-        p_image_url: itemData.image_URL,
-      });
-    } catch {}
+    // Get the item to retrieve its image URL
+    const { data: itemData, error: fetchError } = await supabase
+      .from('items')
+      .select('image_URL')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      throw new Error('Item not found');
+    }
+
+    // Delete image from storage if it exists using RPC (same as update flow)
+    if (itemData?.image_URL) {
+      try {
+        const { data: deleteResult, error: deleteError } = await supabase.rpc('delete_image_from_storage', {
+          p_image_url: itemData.image_URL,
+        });
+        
+        // Continue with item deletion even if image deletion fails
+        void deleteError;
+        void deleteResult;
+      } catch {
+        // Continue with item deletion even if image deletion fails
+      }
+    }
+
+    // Soft delete the item and clear image URL
+    const { error: deleteError } = await supabase
+      .from('items')
+      .update({ deleted_at: new Date().toISOString(), image_URL: null })
+      .eq('id', id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete item: ${deleteError.message}`);
+    }
+
+    // Soft delete related itemtags
+    const { error: tagDeleteError } = await supabase
+      .from('itemtags')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('item_id', id)
+      .is('deleted_at', null);
+
+    // Don't fail the entire deletion if tags deletion fails
+    void tagDeleteError;
+
+    // Soft delete related itemsignouts
+    const { error: signoutDeleteError } = await supabase
+      .from('itemsignouts')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('item_id', id)
+      .is('deleted_at', null);
+
+    // Don't fail the entire deletion if signouts deletion fails
+    void signoutDeleteError;
+
+    return { id, deleted: true } as const;
+  } catch (error) {
+    throw new Error(`Failed to delete item: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-
-  const { error } = await supabase
-    .from('items')
-    .update({ deleted_at: new Date().toISOString(), image_URL: null })
-    .eq('id', id);
-  if (error) throw new Error(error.message);
-
-  await supabase.from('itemtags').update({ deleted_at: new Date().toISOString() }).eq('item_id', id).is('deleted_at', null);
-  await supabase.from('itemsignouts').update({ deleted_at: new Date().toISOString() }).eq('item_id', id).is('deleted_at', null);
 }
 
 export async function checkoutItem(input: {
