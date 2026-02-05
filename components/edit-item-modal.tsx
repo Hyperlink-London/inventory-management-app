@@ -1,6 +1,8 @@
 import { deleteItem, updateItem, createTag } from '@/lib/actions';
 import { supabase } from '@/lib/supabase';
 import { uploadItemImage } from '@/lib/uploadImage';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
+import { TagSelector } from '@/components/tag-selector';
 import type { ItemWithTags } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -18,6 +20,8 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 
+type Tag = { id: string; name: string };
+
 type Props = {
   visible: boolean;
   item: ItemWithTags;
@@ -33,9 +37,12 @@ export function EditItemModal({
   onSuccess,
   onDeleted,
 }: Props) {
+  const { refresh } = useDataRefresh();
   const [name, setName] = useState(item.item_name);
   const [quantity, setQuantity] = useState(String(item.quantity));
   const [notes, setNotes] = useState(item.notes || '');
+  const [tags, setTags] = useState<Tag[]>(item.tags);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,7 +51,16 @@ export function EditItemModal({
       setName(item.item_name);
       setQuantity(String(item.quantity));
       setNotes(item.notes || '');
+      setTags(item.tags);
       setImageUri(null);
+      // Load available tags
+      supabase
+        .from('tags')
+        .select('id, name')
+        .is('deleted_at', null)
+        .then(({ data }) => {
+          setAvailableTags((data as Tag[]) || []);
+        });
     }
   }, [visible, item]);
 
@@ -137,6 +153,20 @@ export function EditItemModal({
         image_url: imageUrl,
       });
 
+      // Update tags: delete existing, then insert new ones
+      await supabase.from('itemtags').delete().eq('item_id', item.id);
+      
+      for (const tag of tags) {
+        const existing = availableTags.find((t) => t.id === tag.id || t.name === tag.name);
+        let tagId = existing?.id;
+        if (!tagId) {
+          // Create new tag if it doesn't exist
+          const created = await createTag(tag.name);
+          tagId = created.id;
+        }
+        await supabase.from('itemtags').insert({ item_id: item.id, tag_id: tagId });
+      }
+
       const { data: itemData } = await supabase
         .from('items')
         .select(
@@ -175,8 +205,12 @@ export function EditItemModal({
             .filter((it: any) => it.tags)
             .map((it: any) => ({ id: it.tags.id, name: it.tags.name })),
         };
+        // Trigger refresh across all screens
+        refresh('all');
         onSuccess(updated);
       } else {
+        // Trigger refresh across all screens
+        refresh('all');
         onSuccess();
       }
     } catch (err) {
@@ -184,7 +218,7 @@ export function EditItemModal({
     } finally {
       setSubmitting(false);
     }
-  }, [item, name, quantity, notes, imageUri, onSuccess]);
+  }, [item, name, quantity, notes, tags, imageUri, availableTags, onSuccess]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -199,6 +233,8 @@ export function EditItemModal({
             setSubmitting(true);
             try {
               await deleteItem(item.id);
+              // Trigger refresh across all screens
+              refresh('all');
               onClose();
               onDeleted();
             } catch (err) {
@@ -260,6 +296,12 @@ export function EditItemModal({
                 <Text style={styles.imageBtnText}>Take photo or choose from library</Text>
               </Pressable>
             )}
+
+            <TagSelector
+              selectedTags={tags}
+              availableTags={availableTags}
+              onTagsChange={setTags}
+            />
 
             <Text style={styles.label}>Notes</Text>
             <TextInput

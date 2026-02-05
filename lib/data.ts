@@ -218,3 +218,108 @@ export async function fetchCheckoutCounts(userProfileId: string | null): Promise
   log.data('fetchCheckoutCounts: result', result);
   return result;
 }
+
+export async function fetchCheckoutsForItem(itemId: string): Promise<CheckoutItem[]> {
+  log.data('fetchCheckoutsForItem: start', itemId);
+  
+  // Try with teams first
+  let query = supabase
+    .from('itemsignouts')
+    .select(
+      `
+      id,
+      item_id,
+      quantity,
+      sign_out_date,
+      expected_return_date,
+      returned_date,
+      recipient_id,
+      items!inner(
+        item_name,
+        image_URL
+      ),
+      profiles(
+        full_name,
+        username,
+        teams
+      )
+    `
+    )
+    .eq('item_id', itemId)
+    .is('deleted_at', null)
+    .order('sign_out_date', { ascending: false });
+
+  const { data, error } = await query;
+
+  // If error is about teams column, try without it
+  if (error && error.message?.includes('column') && error.message?.includes('teams')) {
+    const { data: dataWithoutTeams, error: errorWithoutTeams } = await supabase
+      .from('itemsignouts')
+      .select(
+        `
+        id,
+        item_id,
+        quantity,
+        sign_out_date,
+        expected_return_date,
+        returned_date,
+        recipient_id,
+        items!inner(
+          item_name,
+          image_URL
+        ),
+        profiles(
+          full_name,
+          username
+        )
+      `
+      )
+      .eq('item_id', itemId)
+      .is('deleted_at', null)
+      .order('sign_out_date', { ascending: false });
+
+    if (errorWithoutTeams) {
+      log.data('fetchCheckoutsForItem: error', errorWithoutTeams.message);
+      return [];
+    }
+
+    const checkouts: CheckoutItem[] = (dataWithoutTeams || []).map((c: any) => ({
+      id: c.id,
+      item_id: c.item_id,
+      item_name: c.items?.item_name || 'Unknown',
+      image_URL: c.items?.image_URL || null,
+      quantity: c.quantity,
+      sign_out_date: c.sign_out_date,
+      expected_return_date: c.expected_return_date,
+      returned_date: c.returned_date,
+      recipient_full_name: c.profiles?.full_name || c.profiles?.username || 'Unknown',
+      recipient_id: c.recipient_id,
+      recipient_teams: [],
+    }));
+
+    log.data('fetchCheckoutsForItem: got', checkouts.length, 'checkouts');
+    return checkouts;
+  }
+
+  if (error) {
+    log.data('fetchCheckoutsForItem: error', error.message);
+    return [];
+  }
+
+  const checkouts: CheckoutItem[] = (data || []).map((c: any) => ({
+    id: c.id,
+    item_id: c.item_id,
+    item_name: c.items?.item_name || 'Unknown',
+    image_URL: c.items?.image_URL || null,
+    quantity: c.quantity,
+    sign_out_date: c.sign_out_date,
+    expected_return_date: c.expected_return_date,
+    returned_date: c.returned_date,
+    recipient_full_name: c.profiles?.full_name || c.profiles?.username || 'Unknown',
+    recipient_id: c.recipient_id,
+    recipient_teams: c.profiles?.teams || [],
+  }));
+
+  log.data('fetchCheckoutsForItem: got', checkouts.length, 'checkouts');
+  return checkouts;
+}

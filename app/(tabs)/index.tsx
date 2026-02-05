@@ -1,9 +1,11 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { fetchCheckoutCounts, fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -24,6 +26,7 @@ const LOAD_MORE_SIZE = 20;
 
 export default function DashboardScreen() {
   const { isLoggedIn, isLoading: authLoading, userProfileId } = useAuthContext();
+  const { refreshKey } = useDataRefresh();
   const colors = useThemeColors();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
@@ -67,6 +70,24 @@ export default function DashboardScreen() {
     return () => clearTimeout(timeout);
   }, [authLoading, isLoggedIn, load]);
 
+  // Refresh when screen comes into focus or when refreshKey changes
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn && !authLoading) {
+        logUi('Dashboard: screen focused, refreshing');
+        load();
+      }
+    }, [isLoggedIn, authLoading, load])
+  );
+
+  // Also refresh when refreshKey changes (triggered by mutations)
+  useEffect(() => {
+    if (isLoggedIn && !authLoading && refreshKey > 0) {
+      logUi('Dashboard: refreshKey changed, refreshing');
+      load();
+    }
+  }, [refreshKey, isLoggedIn, authLoading, load]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
@@ -84,27 +105,68 @@ export default function DashboardScreen() {
 
   const renderStatusSection = () => (
     <View style={styles.statusSection}>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('@/assets/images/hyperlink_logo.png')}
+          style={styles.logo}
+          contentFit="contain"
+        />
+      </View>
       <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.statusRow}>
-          <View style={styles.statusItem}>
-            <Feather name="shopping-bag" size={22} color={colors.tint} />
-            <Text style={[styles.statusValue, { color: colors.text }]}>{counts.active}</Text>
-            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Active</Text>
-          </View>
+          <Pressable
+            onPress={() => router.push('/(tabs)/checkouts?filter=active')}
+            style={({ pressed }) => [
+              styles.statusItem,
+              styles.statusItemPressable,
+              pressed && styles.statusItemPressed,
+            ]}
+          >
+            <Feather name="shopping-bag" size={22} color="#22c55e" />
+            <Text style={[styles.statusValue, { color: '#22c55e' }]}>{counts.active}</Text>
+            <Text style={[styles.statusLabel, { color: '#22c55e' }]}>Active</Text>
+          </Pressable>
           <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statusItem}>
-            <Feather name="alert-circle" size={22} color={counts.overdue > 0 ? colors.destructive : colors.mutedForeground} />
-            <Text style={[styles.statusValue, counts.overdue > 0 && { color: colors.destructive }]}>
+          <Pressable
+            onPress={() => router.push('/(tabs)/checkouts?filter=overdue')}
+            style={({ pressed }) => [
+              styles.statusItem,
+              styles.statusItemPressable,
+              pressed && styles.statusItemPressed,
+            ]}
+          >
+            <Feather
+              name="alert-circle"
+              size={22}
+              color={counts.overdue > 0 ? '#dc2626' : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.statusValue,
+                { color: counts.overdue > 0 ? '#dc2626' : colors.mutedForeground },
+              ]}
+            >
               {counts.overdue}
             </Text>
-            <Text style={[styles.statusLabel, { color: colors.mutedForeground }]}>Overdue</Text>
-          </View>
+            <Text
+              style={[
+                styles.statusLabel,
+                { color: counts.overdue > 0 ? '#dc2626' : colors.mutedForeground },
+              ]}
+            >
+              Overdue
+            </Text>
+          </Pressable>
         </View>
         <Pressable
           onPress={() => router.push('/(tabs)/checkouts')}
-          style={({ pressed }) => [styles.statusLink, { borderTopColor: colors.border }, pressed && styles.statusLinkPressed]}
+          style={({ pressed }) => [
+            styles.statusLink,
+            { borderTopColor: colors.border },
+            pressed && styles.statusLinkPressed,
+          ]}
         >
-          <Text style={[styles.statusLinkText, { color: colors.tint }]}>View checkouts</Text>
+          <Text style={[styles.statusLinkText, { color: colors.tint }]}>View all checkouts</Text>
           <Feather name="chevron-right" size={18} color={colors.tint} />
         </Pressable>
       </View>
@@ -159,6 +221,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusSection: { marginBottom: 20 },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logo: {
+    width: 180,
+    height: 45,
+  },
   statusCard: {
     borderRadius: 12,
     padding: 16,
@@ -172,6 +242,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
+  },
+  statusItemPressable: {
+    borderRadius: 8,
+  },
+  statusItemPressed: {
+    opacity: 0.7,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   statusDivider: {
     width: 1,

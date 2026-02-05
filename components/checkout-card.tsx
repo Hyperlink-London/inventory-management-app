@@ -1,5 +1,6 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { checkInItem } from '@/lib/actions';
 import type { CheckoutItem } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
   const colors = useThemeColors();
   const router = useRouter();
   const { userProfileId } = useAuthContext();
+  const { refresh } = useDataRefresh();
   const [loading, setLoading] = useState(false);
 
   const isReturned = !!checkout.returned_date;
@@ -45,6 +47,8 @@ export function CheckoutCard({ checkout, onCheckIn }: Props) {
           setLoading(true);
           try {
             await checkInItem(checkout.id);
+            // Trigger refresh across all screens
+            refresh('all');
             onCheckIn();
           } catch (err) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Failed to check in');

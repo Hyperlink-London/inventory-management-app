@@ -1,4 +1,5 @@
 import { checkoutItem } from '@/lib/actions';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
 import type { ItemWithTags } from '@/types';
 import { useState } from 'react';
 import {
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
+  const { refresh } = useDataRefresh();
   const [quantity, setQuantity] = useState('1');
   const [expectedDate, setExpectedDate] = useState(() => {
     const d = new Date();
@@ -49,6 +51,8 @@ export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
         quantity: qty,
         expected_return_date: expectedDate,
       });
+      // Trigger refresh across all screens
+      refresh('all');
       onSuccess();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Checkout failed');

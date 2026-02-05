@@ -1,9 +1,10 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,6 +28,7 @@ const LOAD_MORE_SIZE = 20;
 export default function ItemsScreen() {
   const colors = useThemeColors();
   const { isLoggedIn, isLoading: authLoading } = useAuthContext();
+  const { refreshKey } = useDataRefresh();
   const router = useRouter();
   const [items, setItems] = useState<ItemWithTags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,24 @@ export default function ItemsScreen() {
     setLoading(true);
     load();
   }, [authLoading, isLoggedIn, load]);
+
+  // Refresh when screen comes into focus or when refreshKey changes
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn && !authLoading) {
+        logUi('Items: screen focused, refreshing');
+        load();
+      }
+    }, [isLoggedIn, authLoading, load])
+  );
+
+  // Also refresh when refreshKey changes (triggered by mutations)
+  useEffect(() => {
+    if (isLoggedIn && !authLoading && refreshKey > 0) {
+      logUi('Items: refreshKey changed, refreshing');
+      load();
+    }
+  }, [refreshKey, isLoggedIn, authLoading, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);

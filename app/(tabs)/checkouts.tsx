@@ -1,10 +1,12 @@
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { fetchCheckoutCounts, fetchCheckouts } from '@/lib/data';
 import { log } from '@/lib/logger';
 import type { CheckoutItem } from '@/types';
 import { Feather } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -27,12 +29,35 @@ const TAB_CONFIG: { key: ViewMode; label: string; icon: 'user' | 'users' | 'chec
 
 export default function CheckoutsScreen() {
   const colors = useThemeColors();
+  const router = useRouter();
   const { userProfileId, isLoggedIn, isLoading: authLoading } = useAuthContext();
-  const [checkouts, setCheckouts] = useState<CheckoutItem[]>([]);
+  const { refreshKey } = useDataRefresh();
+  const params = useLocalSearchParams<{ filter?: 'active' | 'overdue' }>();
+  const [allCheckouts, setAllCheckouts] = useState<CheckoutItem[]>([]);
   const [counts, setCounts] = useState({ active: 0, overdue: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('yours');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Filter checkouts based on status filter from params
+  const checkouts = useMemo(() => {
+    if (!params.filter) return allCheckouts;
+    
+    const now = new Date();
+    return allCheckouts.filter((checkout) => {
+      if (checkout.returned_date) return false; // Exclude returned items
+      
+      if (params.filter === 'overdue') {
+        // Show only overdue items
+        return checkout.expected_return_date && new Date(checkout.expected_return_date) < now;
+      } else if (params.filter === 'active') {
+        // Show only active (non-overdue) items
+        return !checkout.expected_return_date || new Date(checkout.expected_return_date) >= now;
+      }
+      
+      return true;
+    });
+  }, [allCheckouts, params.filter]);
 
   const load = useCallback(async () => {
     log.ui('Checkouts: load start', viewMode, userProfileId);
@@ -47,11 +72,11 @@ export default function CheckoutsScreen() {
         fetchCheckoutCounts(userProfileId),
       ]);
       log.ui('Checkouts: load done', checkoutData.checkouts.length, 'checkouts');
-      setCheckouts(checkoutData.checkouts);
+      setAllCheckouts(checkoutData.checkouts);
       setCounts(countData);
     } catch (err) {
       log.ui('Checkouts: load error', err);
-      setCheckouts([]);
+      setAllCheckouts([]);
     } finally {
       setLoading(false);
     }
@@ -68,6 +93,24 @@ export default function CheckoutsScreen() {
     load();
   }, [authLoading, isLoggedIn, load]);
 
+  // Refresh when screen comes into focus or when refreshKey changes
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn && !authLoading) {
+        log.ui('Checkouts: screen focused, refreshing');
+        load();
+      }
+    }, [isLoggedIn, authLoading, load])
+  );
+
+  // Also refresh when refreshKey changes (triggered by mutations)
+  useEffect(() => {
+    if (isLoggedIn && !authLoading && refreshKey > 0) {
+      log.ui('Checkouts: refreshKey changed, refreshing');
+      load();
+    }
+  }, [refreshKey, isLoggedIn, authLoading, load]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
@@ -76,9 +119,19 @@ export default function CheckoutsScreen() {
 
   const isEmpty = checkouts.length === 0;
   const emptyTitle =
-    viewMode === 'returned' ? 'No returned checkouts' : 'No active checkouts';
+    params.filter === 'overdue'
+      ? 'No overdue checkouts'
+      : params.filter === 'active'
+      ? 'No active checkouts'
+      : viewMode === 'returned'
+      ? 'No returned checkouts'
+      : 'No active checkouts';
   const emptySubtitle =
-    viewMode === 'returned'
+    params.filter === 'overdue'
+      ? 'All checkouts are on time'
+      : params.filter === 'active'
+      ? 'No active checkouts at this time'
+      : viewMode === 'returned'
       ? 'Returned items will appear here'
       : 'Checked out items will appear here';
 
@@ -94,7 +147,35 @@ export default function CheckoutsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Checkouts</Text>
-        {(counts.active > 0 || counts.overdue > 0) && (
+        {params.filter === 'active' && (
+          <Pressable
+            onPress={() => router.replace('/(tabs)/checkouts')}
+            style={({ pressed }) => [
+              styles.filterBadge,
+              { backgroundColor: 'rgba(34, 197, 94, 0.15)' },
+              pressed && styles.filterBadgePressed,
+            ]}
+          >
+            <View style={[styles.filterDot, { backgroundColor: '#22c55e' }]} />
+            <Text style={[styles.filterBadgeText, { color: '#22c55e' }]}>Active Only</Text>
+            <Feather name="x" size={14} color="#22c55e" style={{ marginLeft: 4 }} />
+          </Pressable>
+        )}
+        {params.filter === 'overdue' && (
+          <Pressable
+            onPress={() => router.replace('/(tabs)/checkouts')}
+            style={({ pressed }) => [
+              styles.filterBadge,
+              { backgroundColor: 'rgba(220, 38, 38, 0.15)' },
+              pressed && styles.filterBadgePressed,
+            ]}
+          >
+            <View style={[styles.filterDot, { backgroundColor: '#dc2626' }]} />
+            <Text style={[styles.filterBadgeText, { color: '#dc2626' }]}>Overdue Only</Text>
+            <Feather name="x" size={14} color="#dc2626" style={{ marginLeft: 4 }} />
+          </Pressable>
+        )}
+        {!params.filter && (counts.active > 0 || counts.overdue > 0) && (
           <View style={styles.activeBadge}>
             <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
             <Text style={[styles.activeBadgeText, { color: colors.success }]}>{counts.active} Active</Text>
@@ -182,6 +263,28 @@ const styles = StyleSheet.create({
   activeBadgeText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  filterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    marginTop: 8,
+  },
+  filterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  filterBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterBadgePressed: {
+    opacity: 0.7,
   },
   tabs: {
     flexDirection: 'row',

@@ -1,11 +1,17 @@
 import { GitHubSignInButton } from '@/components/github-sign-in-button';
 import { useThemeColors } from '@/hooks/use-theme-colors';
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function LoginScreen() {
   const colors = useThemeColors();
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Image
+        source={require('@/assets/images/hyperlink_logo.png')}
+        style={styles.logo}
+        contentFit="contain"
+      />
       <Text style={[styles.title, { color: colors.text }]}>Inventory Management</Text>
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
         Sign in to manage your inventory
@@ -21,6 +27,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  logo: {
+    width: 200,
+    height: 50,
+    marginBottom: 32,
   },
   title: {
     fontSize: 28,

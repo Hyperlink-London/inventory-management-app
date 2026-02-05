@@ -2,6 +2,8 @@ import { createItem, createTag } from '@/lib/actions';
 import { supabase } from '@/lib/supabase';
 import { uploadItemImage } from '@/lib/uploadImage';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useDataRefresh } from '@/providers/data-refresh-provider';
+import { TagSelector } from '@/components/tag-selector';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,6 +30,7 @@ type Props = {
 
 export function AddItemModal({ visible, onClose, onSuccess }: Props) {
   const { session } = useAuthContext();
+  const { refresh } = useDataRefresh();
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [notes, setNotes] = useState('');
@@ -151,6 +154,8 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
       setNotes('');
       setTags([]);
       setImageUri(null);
+      // Trigger refresh across all screens
+      refresh('all');
       onSuccess();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to add item');
@@ -212,6 +217,12 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
                 <Text style={styles.imageButtonText}>Take photo or choose from library</Text>
               </Pressable>
             )}
+
+            <TagSelector
+              selectedTags={tags}
+              availableTags={availableTags}
+              onTagsChange={setTags}
+            />
 
             <Text style={styles.label}>Notes</Text>
             <TextInput
