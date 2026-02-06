@@ -88,12 +88,31 @@ export default function NotificationsScreen() {
     );
   };
 
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+  const [markingAll, setMarkingAll] = useState(false);
+
+  const markAllAsRead = async () => {
+    if (!profile?.id || unreadCount === 0) return;
+    setMarkingAll(true);
+    await supabase
+      .from('notification_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('recipient_profile_id', profile.id)
+      .is('read_at', null);
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() }))
+    );
+    setMarkingAll(false);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'team_checkout':
         return 'shopping-cart';
       case 'team_item_added':
         return 'package';
+      case 'overdue_reminder':
+        return 'alert-circle';
       default:
         return 'bell';
     }
@@ -105,12 +124,34 @@ export default function NotificationsScreen() {
     return null;
   }
 
+  const listHeader =
+    unreadCount > 0 ? (
+      <Pressable
+        onPress={markAllAsRead}
+        disabled={markingAll}
+        style={({ pressed }) => [
+          styles.markAllBar,
+          { backgroundColor: colors.muted, borderBottomColor: colors.border },
+          pressed && styles.markAllPressed,
+        ]}
+      >
+        {markingAll ? (
+          <ActivityIndicator size="small" color={colors.tint} />
+        ) : (
+          <Text style={[styles.markAllText, { color: colors.tint }]}>
+            Mark all as read
+          </Text>
+        )}
+      </Pressable>
+    ) : null;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={listHeader}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -200,7 +241,17 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { padding: 16, paddingBottom: 32 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 32 },
+  markAllBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  markAllPressed: { opacity: 0.8 },
+  markAllText: { fontSize: 15, fontWeight: '600' },
   empty: {
     paddingVertical: 48,
     alignItems: 'center',

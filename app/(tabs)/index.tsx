@@ -5,7 +5,6 @@ import { fetchCheckoutCounts, fetchItems } from '@/lib/data';
 import type { ItemWithTags } from '@/types';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -105,13 +104,6 @@ export default function DashboardScreen() {
 
   const renderStatusSection = () => (
     <View style={styles.statusSection}>
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('@/assets/images/hyperlink_logo.png')}
-          style={styles.logo}
-          contentFit="contain"
-        />
-      </View>
       <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.statusRow}>
           <Pressable
@@ -221,14 +213,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   statusSection: { marginBottom: 20 },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logo: {
-    width: 180,
-    height: 45,
-  },
   statusCard: {
     borderRadius: 12,
     padding: 16,

@@ -214,6 +214,37 @@ export async function fetchActiveCheckoutsForNotifications(): Promise<CheckoutFo
   }));
 }
 
+/** Overdue checkout row for inbox notifications. */
+export type OverdueCheckoutForInbox = {
+  id: string;
+  item_id: string;
+  item_name: string;
+  expected_return_date: string;
+};
+
+/** Fetch overdue checkouts for the current user (recipient) for showing in notification inbox. */
+export async function fetchOverdueCheckoutsForInbox(
+  profileId: string
+): Promise<OverdueCheckoutForInbox[]> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('itemsignouts')
+    .select('id, item_id, expected_return_date, items!inner(item_name)')
+    .eq('recipient_id', profileId)
+    .is('deleted_at', null)
+    .is('returned_date', null)
+    .not('expected_return_date', 'is', null)
+    .lt('expected_return_date', now);
+
+  if (error || !data) return [];
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    item_id: c.item_id,
+    item_name: c.items?.item_name ?? 'Item',
+    expected_return_date: c.expected_return_date,
+  }));
+}
+
 export async function fetchCheckoutCounts(userProfileId: string | null): Promise<{
   active: number;
   overdue: number;

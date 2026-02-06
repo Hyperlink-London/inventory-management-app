@@ -213,15 +213,44 @@ export default function CheckoutsScreen() {
             <Feather name="x" size={14} color="#dc2626" style={{ marginLeft: 4 }} />
           </Pressable>
         )}
-        {!params.filter && (counts.active > 0 || counts.overdue > 0) && (
-          <View style={styles.activeBadge}>
-            <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
-            <Text style={[styles.activeBadgeText, { color: colors.success }]}>{counts.active} Active</Text>
+        {!params.filter && viewMode !== 'returned' && (counts.active > 0 || counts.overdue > 0) && (
+          <View style={styles.filterIndicators}>
+            <Pressable
+              onPress={() => router.replace('/(tabs)/checkouts?filter=active')}
+              style={({ pressed }) => [
+                styles.filterIndicatorChip,
+                { backgroundColor: 'rgba(34, 197, 94, 0.15)', borderColor: 'rgba(34, 197, 94, 0.4)' },
+                pressed && styles.filterIndicatorPressed,
+              ]}
+            >
+              <View style={[styles.filterDot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.filterIndicatorText, { color: colors.success }]}>
+                {counts.active} Active
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.replace('/(tabs)/checkouts?filter=overdue')}
+              style={({ pressed }) => [
+                styles.filterIndicatorChip,
+                { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)' },
+                pressed && styles.filterIndicatorPressed,
+              ]}
+            >
+              <View style={[styles.filterDot, { backgroundColor: colors.destructive }]} />
+              <Text style={[styles.filterIndicatorText, { color: colors.destructive }]}>
+                {counts.overdue} Overdue
+              </Text>
+            </Pressable>
           </View>
         )}
       </View>
 
-      <View style={styles.tabs}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsScroll}
+        style={styles.tabsScrollView}
+      >
         {TAB_CONFIG.filter((tab) => !tab.requiresTeams || normalizedUserTeams.length > 0).map(({ key, label, icon }) => {
           const isTeamTab = key === 'team';
           const onTabPress = () => {
@@ -244,6 +273,7 @@ export default function CheckoutsScreen() {
               <Text
                 style={[
                   styles.tabText,
+                  styles.tabLabel,
                   { color: isActive ? colors.text : colors.mutedForeground },
                   isActive && styles.tabTextActive,
                 ]}
@@ -253,7 +283,7 @@ export default function CheckoutsScreen() {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {viewMode === 'team' && normalizedUserTeams.length > 0 && (
         <View style={styles.teamFilterSection}>
@@ -342,24 +372,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
   },
-  activeBadge: {
+  filterIndicators: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  filterIndicatorChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
+    borderWidth: 1,
+  },
+  filterIndicatorText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterIndicatorPressed: {
+    opacity: 0.8,
   },
   activeDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-  },
-  activeBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   filterBadge: {
     flexDirection: 'row',
@@ -383,17 +421,30 @@ const styles = StyleSheet.create({
   filterBadgePressed: {
     opacity: 0.7,
   },
-  tabs: {
-    flexDirection: 'row',
+  tabsScrollView: {
     marginBottom: 20,
-    gap: 8,
+    width: '100%',
+    minHeight: 52,
+  },
+  tabsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 8,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 8,
+    flexShrink: 0,
+    minHeight: 44,
+  },
+  tabLabel: {
+    flexShrink: 0,
   },
   tabIcon: { marginRight: 6 },
   tabText: {

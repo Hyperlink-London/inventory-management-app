@@ -2,6 +2,8 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { supabase } from './supabase';
 import { log } from './logger';
+import type { OverdueCheckoutForInbox } from './data';
+import { fetchOverdueCheckoutsForInbox } from './data';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -148,5 +150,48 @@ export async function notifyTeamItemAdded(
   const tokens = await getTeammatePushTokens();
   if (tokens.length > 0) {
     await sendPushToTokens(tokens, title, body);
+  }
+}
+
+const OVERDUE_REMINDER_TYPE = 'overdue_reminder';
+
+/**
+ * Ensure the current user's overdue checkouts appear in their notification inbox.
+ * Inserts one notification_messages row per overdue checkout (if not already present).
+ */
+export async function ensureOverdueInInbox(profileId: string): Promise<void> {
+  try {
+    const overdue = await fetchOverdueCheckoutsForInbox(profileId);
+    if (overdue.length === 0) return;
+
+    const { data: existing } = await supabase
+      .from('notification_messages')
+      .select('metadata')
+      .eq('recipient_profile_id', profileId)
+      .eq('type', OVERDUE_REMINDER_TYPE);
+
+    const existingSignoutIds = new Set(
+      (existing || [])
+        .map((r: { metadata?: { itemsignout_id?: string } }) => r.metadata?.itemsignout_id)
+        .filter(Boolean)
+    );
+
+    const toInsert: OverdueCheckoutForInbox[] = overdue.filter((c) => !existingSignoutIds.has(c.id));
+    if (toInsert.length === 0) return;
+
+    const expectedFmt = (d: string) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const rows = toInsert.map((c) => ({
+      recipient_profile_id: profileId,
+      sender_profile_id: null,
+      type: OVERDUE_REMINDER_TYPE,
+      title: 'Overdue',
+      body: `"${c.item_name}" was due ${expectedFmt(c.expected_return_date)} and is overdue.`,
+      metadata: { itemsignout_id: c.id, item_id: c.item_id },
+    }));
+
+    const { error } = await supabase.from('notification_messages').insert(rows);
+    if (error) log.data('ensureOverdueInInbox insert error', error.message);
+  } catch (e) {
+    log.data('ensureOverdueInInbox exception', e);
   }
 }

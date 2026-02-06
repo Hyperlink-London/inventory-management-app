@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HeaderLogo } from '@/components/header-logo';
+import { NotificationButton } from '@/components/notification-button';
 import { ProfileMenu } from '@/components/profile-menu';
 import { AddItemModalProvider, useAddItemModal } from '@/providers/add-item-modal-provider';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -35,7 +36,12 @@ export default function TabLayout() {
           headerShown: true,
           headerTitle: () => <HeaderLogo />,
           headerTitleAlign: 'left',
-          headerRight: () => <ProfileMenu />,
+          headerRight: () => (
+            <View style={styles.headerRight}>
+              <NotificationButton />
+              <ProfileMenu />
+            </View>
+          ),
           headerShadowVisible: false,
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
@@ -86,6 +92,11 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   addTabWrap: {
     flex: 1,
     justifyContent: 'center',

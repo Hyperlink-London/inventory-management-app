@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { CheckoutForNotification } from './data';
+import { isExpoGo } from './expo-go';
 
 const NOTIFICATION_HOUR = 9;
 const NOTIFICATION_MINUTE = 0;
@@ -8,17 +9,20 @@ const PREFIX_DUE = 'due-';
 const PREFIX_OVERDUE = 'overdue-';
 const ANDROID_CHANNEL_ID = 'checkout-reminders';
 
-/** How to show notifications when app is in foreground. */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+/** How to show notifications when app is in foreground. No-op in Expo Go (notifications not fully supported). */
+if (!isExpoGo()) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
-/** Create Android channel for checkout reminders. Call once on app init. */
+/** Create Android channel for checkout reminders. Call once on app init. No-op in Expo Go. */
 export async function setupNotificationChannel(): Promise<void> {
+  if (isExpoGo()) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: 'Checkout reminders',
@@ -29,10 +33,10 @@ export async function setupNotificationChannel(): Promise<void> {
 
 /**
  * Request notification permissions. Call once when user is logged in.
- * No-op on web.
+ * No-op on web or in Expo Go (push not supported in Expo Go SDK 53+).
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'web' || isExpoGo()) return false;
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
@@ -65,11 +69,12 @@ async function cancelCheckoutNotifications(): Promise<void> {
 /**
  * Schedule local notifications for "due tomorrow" and "overdue" for each checkout.
  * Call after fetching active checkouts (e.g. on app load and when checkouts refresh).
+ * No-op on web or in Expo Go.
  */
 export async function scheduleCheckoutNotifications(
   checkouts: CheckoutForNotification[]
 ): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web' || isExpoGo()) return;
   await cancelCheckoutNotifications();
 
   const now = new Date();

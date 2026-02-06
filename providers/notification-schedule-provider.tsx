@@ -6,7 +6,8 @@ import * as Notifications from 'expo-notifications';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { fetchActiveCheckoutsForNotifications } from '@/lib/data';
-import { registerPushToken } from '@/lib/team-push';
+import { ensureOverdueInInbox, registerPushToken } from '@/lib/team-push';
+import { isExpoGo } from '@/lib/expo-go';
 import {
   requestNotificationPermissions,
   scheduleCheckoutNotifications,
@@ -24,7 +25,7 @@ export function NotificationScheduleProvider({ children }: { children: React.Rea
   const scheduledRef = useRef(false);
 
   const schedule = useCallback(async () => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || isExpoGo()) return;
     const granted = await requestNotificationPermissions();
     if (!granted) return;
     await setupNotificationChannel();
@@ -36,6 +37,7 @@ export function NotificationScheduleProvider({ children }: { children: React.Rea
       } catch {
         // Push token may fail on simulator or without proper config
       }
+      await ensureOverdueInInbox(userProfileId);
     }
     const checkouts = await fetchActiveCheckoutsForNotifications();
     await scheduleCheckoutNotifications(checkouts);
@@ -47,6 +49,7 @@ export function NotificationScheduleProvider({ children }: { children: React.Rea
       scheduledRef.current = false;
       return;
     }
+    ensureOverdueInInbox(userProfileId);
     schedule();
   }, [isLoggedIn, userProfileId, refreshKey, schedule]);
 
