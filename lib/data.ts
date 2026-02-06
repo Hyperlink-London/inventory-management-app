@@ -190,6 +190,30 @@ export async function fetchCheckouts(params: {
   return { checkouts, count: count ?? 0 };
 }
 
+/** Minimal checkout data for scheduling due/overdue notifications. */
+export type CheckoutForNotification = {
+  id: string;
+  item_name: string;
+  expected_return_date: string;
+};
+
+/** Fetch active (not returned) checkouts that have an expected return date, for notification scheduling. */
+export async function fetchActiveCheckoutsForNotifications(): Promise<CheckoutForNotification[]> {
+  const { data, error } = await supabase
+    .from('itemsignouts')
+    .select('id, expected_return_date, items!inner(item_name)')
+    .is('deleted_at', null)
+    .is('returned_date', null)
+    .not('expected_return_date', 'is', null);
+
+  if (error || !data) return [];
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    item_name: c.items?.item_name ?? 'Item',
+    expected_return_date: c.expected_return_date,
+  }));
+}
+
 export async function fetchCheckoutCounts(userProfileId: string | null): Promise<{
   active: number;
   overdue: number;

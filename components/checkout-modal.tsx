@@ -1,5 +1,7 @@
 import { checkoutItem } from '@/lib/actions';
+import { notifyTeamCheckout } from '@/lib/team-push';
 import { useDataRefresh } from '@/providers/data-refresh-provider';
+import { useAuthContext } from '@/hooks/use-auth-context';
 import type { ItemWithTags } from '@/types';
 import { useState } from 'react';
 import {
@@ -21,6 +23,7 @@ type Props = {
 
 export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
   const { refresh } = useDataRefresh();
+  const { profile } = useAuthContext();
   const [quantity, setQuantity] = useState('1');
   const [expectedDate, setExpectedDate] = useState(() => {
     const d = new Date();
@@ -51,6 +54,9 @@ export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
         quantity: qty,
         expected_return_date: expectedDate,
       });
+      // Notify teammates (push) so everyone in the team sees "X checked out Y"
+      const name = profile?.full_name || profile?.username || 'A teammate';
+      await notifyTeamCheckout(name, item.item_name);
       // Trigger refresh across all screens
       refresh('all');
       onSuccess();

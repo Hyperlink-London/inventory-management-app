@@ -19,6 +19,7 @@ import { AppDarkTheme } from '@/constants/Theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import AuthProvider from '@/providers/auth-provider';
 import { DataRefreshProvider } from '@/providers/data-refresh-provider';
+import { NotificationScheduleProvider } from '@/providers/notification-schedule-provider';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -33,8 +34,10 @@ function RootLayoutNav() {
     <ThemeProvider value={AppDarkTheme}>
       <AuthProvider>
         <DataRefreshProvider>
-          <SplashScreenController />
-          <ProtectedRoutes />
+          <NotificationScheduleProvider>
+            <SplashScreenController />
+            <ProtectedRoutes />
+          </NotificationScheduleProvider>
         </DataRefreshProvider>
       </AuthProvider>
     </ThemeProvider>

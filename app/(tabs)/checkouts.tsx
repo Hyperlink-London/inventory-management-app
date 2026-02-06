@@ -12,6 +12,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -19,52 +20,85 @@ import {
 
 import { CheckoutCard } from '@/components/checkout-card';
 
-type ViewMode = 'yours' | 'everyone' | 'returned';
+type ViewMode = 'yours' | 'everyone' | 'team' | 'returned';
 
-const TAB_CONFIG: { key: ViewMode; label: string; icon: 'user' | 'users' | 'check-circle' }[] = [
+const TAB_CONFIG: { key: ViewMode; label: string; icon: 'user' | 'users' | 'briefcase' | 'check-circle'; requiresTeams?: boolean }[] = [
   { key: 'yours', label: 'Yours', icon: 'user' },
   { key: 'everyone', label: 'Everyone', icon: 'users' },
+  { key: 'team', label: 'Team', icon: 'briefcase', requiresTeams: true },
   { key: 'returned', label: 'Returned', icon: 'check-circle' },
 ];
 
 export default function CheckoutsScreen() {
   const colors = useThemeColors();
   const router = useRouter();
-  const { userProfileId, isLoggedIn, isLoading: authLoading } = useAuthContext();
+  const { userProfileId, userTeams, isLoggedIn, isLoading: authLoading } = useAuthContext();
   const { refreshKey } = useDataRefresh();
   const params = useLocalSearchParams<{ filter?: 'active' | 'overdue' }>();
   const [allCheckouts, setAllCheckouts] = useState<CheckoutItem[]>([]);
   const [counts, setCounts] = useState({ active: 0, overdue: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('yours');
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filter checkouts based on status filter from params
+  // Normalize user teams for filtering (handle nulls, trim, non-empty strings), sorted for stable chip order
+  const normalizedUserTeams = useMemo(() => {
+    return (userTeams ?? [])
+      .filter((t): t is string => t != null && typeof t === 'string')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      .sort((a, b) => a.localeCompare(b));
+  }, [userTeams]);
+
+  // When in team view: filter by selected team (or all my teams)
+  const teamsToFilterBy = useMemo(() => {
+    if (viewMode !== 'team' || normalizedUserTeams.length === 0) return [];
+    return selectedTeamFilter ? [selectedTeamFilter] : normalizedUserTeams;
+  }, [viewMode, normalizedUserTeams, selectedTeamFilter]);
+
+  // Filter checkouts by view mode (team = recipient in one of my teams, optionally one team) and by params (active/overdue)
   const checkouts = useMemo(() => {
-    if (!params.filter) return allCheckouts;
-    
+    let list = allCheckouts;
+
+    // Team view: show only checkouts where recipient is in the selected team(s)
+    if (viewMode === 'team' && teamsToFilterBy.length > 0) {
+      list = list.filter((checkout) => {
+        const recipientTeams = checkout.recipient_teams ?? [];
+        const normalizedRecipient = Array.isArray(recipientTeams)
+          ? recipientTeams
+              .filter((t): t is string => t != null && typeof t === 'string')
+              .map((t) => t.trim())
+              .filter((t) => t.length > 0)
+          : [];
+        return normalizedRecipient.some((rt) => teamsToFilterBy.includes(rt));
+      });
+    }
+
+    if (!params.filter) return list;
+
     const now = new Date();
-    return allCheckouts.filter((checkout) => {
-      if (checkout.returned_date) return false; // Exclude returned items
-      
+    return list.filter((checkout) => {
+      if (checkout.returned_date) return false;
+
       if (params.filter === 'overdue') {
-        // Show only overdue items
         return checkout.expected_return_date && new Date(checkout.expected_return_date) < now;
-      } else if (params.filter === 'active') {
-        // Show only active (non-overdue) items
+      }
+      if (params.filter === 'active') {
         return !checkout.expected_return_date || new Date(checkout.expected_return_date) >= now;
       }
-      
       return true;
     });
-  }, [allCheckouts, params.filter]);
+  }, [allCheckouts, viewMode, teamsToFilterBy, params.filter]);
 
   const load = useCallback(async () => {
-    log.ui('Checkouts: load start', viewMode, userProfileId);
+    // For "team" view we fetch everyone's checkouts and filter client-side by recipient_teams
+    const fetchView = viewMode === 'team' ? 'everyone' : viewMode;
+    log.ui('Checkouts: load start', viewMode, fetchView, userProfileId);
     try {
       const [checkoutData, countData] = await Promise.all([
         fetchCheckouts({
-          view: viewMode,
+          view: fetchView,
           userProfileId,
           from: 0,
           to: 49,
@@ -123,6 +157,8 @@ export default function CheckoutsScreen() {
       ? 'No overdue checkouts'
       : params.filter === 'active'
       ? 'No active checkouts'
+      : viewMode === 'team'
+      ? 'No team checkouts'
       : viewMode === 'returned'
       ? 'No returned checkouts'
       : 'No active checkouts';
@@ -131,6 +167,8 @@ export default function CheckoutsScreen() {
       ? 'All checkouts are on time'
       : params.filter === 'active'
       ? 'No active checkouts at this time'
+      : viewMode === 'team'
+      ? 'Checkouts from people in your teams will appear here'
       : viewMode === 'returned'
       ? 'Returned items will appear here'
       : 'Checked out items will appear here';
@@ -184,12 +222,17 @@ export default function CheckoutsScreen() {
       </View>
 
       <View style={styles.tabs}>
-        {TAB_CONFIG.map(({ key, label, icon }) => {
+        {TAB_CONFIG.filter((tab) => !tab.requiresTeams || normalizedUserTeams.length > 0).map(({ key, label, icon }) => {
+          const isTeamTab = key === 'team';
+          const onTabPress = () => {
+            setViewMode(key);
+            if (!isTeamTab) setSelectedTeamFilter(null);
+          };
           const isActive = viewMode === key;
           return (
             <Pressable
               key={key}
-              onPress={() => setViewMode(key)}
+              onPress={onTabPress}
               style={[styles.tab, isActive && { backgroundColor: colors.muted }]}
             >
               <Feather
@@ -211,6 +254,60 @@ export default function CheckoutsScreen() {
           );
         })}
       </View>
+
+      {viewMode === 'team' && normalizedUserTeams.length > 0 && (
+        <View style={styles.teamFilterSection}>
+          <Text style={[styles.teamFilterLabel, { color: colors.mutedForeground }]}>Team</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.teamFilterScroll}
+          >
+            <Pressable
+              onPress={() => setSelectedTeamFilter(null)}
+              style={[
+                styles.teamChip,
+                { backgroundColor: colors.muted, borderColor: colors.border },
+                selectedTeamFilter === null && styles.teamChipSelected,
+                selectedTeamFilter === null && { backgroundColor: colors.tint, borderColor: colors.tint },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.teamChipText,
+                  { color: selectedTeamFilter === null ? '#fff' : colors.text },
+                ]}
+              >
+                All
+              </Text>
+            </Pressable>
+            {normalizedUserTeams.map((team) => {
+              const isSelected = selectedTeamFilter === team;
+              return (
+                <Pressable
+                  key={team}
+                  onPress={() => setSelectedTeamFilter(team)}
+                  style={[
+                    styles.teamChip,
+                    { backgroundColor: colors.muted, borderColor: colors.border },
+                    isSelected && { backgroundColor: colors.tint, borderColor: colors.tint },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.teamChipText,
+                      { color: isSelected ? '#fff' : colors.text },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {team}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       <FlatList
         data={checkouts}
@@ -304,6 +401,33 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     fontWeight: '500',
+  },
+  teamFilterSection: {
+    marginBottom: 16,
+  },
+  teamFilterLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  teamFilterScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 8,
+  },
+  teamChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  teamChipSelected: {},
+  teamChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    maxWidth: 160,
   },
   empty: {
     flex: 1,

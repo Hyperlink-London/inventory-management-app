@@ -1,6 +1,7 @@
 import { createItem, createTag } from '@/lib/actions';
 import { supabase } from '@/lib/supabase';
 import { uploadItemImage } from '@/lib/uploadImage';
+import { notifyTeamItemAdded } from '@/lib/team-push';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useDataRefresh } from '@/providers/data-refresh-provider';
 import { TagSelector } from '@/components/tag-selector';
@@ -29,7 +30,7 @@ type Props = {
 };
 
 export function AddItemModal({ visible, onClose, onSuccess }: Props) {
-  const { session } = useAuthContext();
+  const { session, profile } = useAuthContext();
   const { refresh } = useDataRefresh();
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -149,6 +150,10 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
         await supabase.from('itemtags').insert({ item_id: item.id, tag_id: tagId });
       }
 
+      // Notify teammates so everyone in the team sees "X added Y"
+      const adderName = profile?.full_name || profile?.username || 'A teammate';
+      await notifyTeamItemAdded(adderName, trimmed);
+
       setName('');
       setQuantity('');
       setNotes('');
@@ -162,7 +167,7 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [session, name, quantity, notes, tags, imageUri, availableTags, onSuccess]);
+  }, [session, profile, name, quantity, notes, tags, imageUri, availableTags, onSuccess]);
 
   const addTag = (tag: Tag) => {
     if (!tags.some((t) => t.id === tag.id && t.name === tag.name)) {
