@@ -24,7 +24,7 @@ A fully functional inventory management mobile app for iOS built with Expo and S
 This app uses the same Supabase database as the web application. Ensure your Supabase project has:
 
 - **Tables**: `profiles`, `items`, `tags`, `itemtags`, `itemsignouts`
-- **RPC functions**: `create_item`, `update_item`, `create_tag`, `checkout_item`, `checkin_item`, `delete_image_from_storage`
+- **RPC functions**: `create_item`, `update_item`, `create_tag`, `checkout_item`, `checkin_item`, `delete_image_from_storage`, `delete_item`
 - **Storage bucket**: `item-images` (public)
 
 Refer to the source [software-inventory-management](https://github.com/hyperlink/software-inventory-management) project for the full schema.
