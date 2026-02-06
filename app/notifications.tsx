@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { supabase } from '@/lib/supabase';
+import { ensureOverdueNotifications } from '@/lib/ensure-overdue-notifications';
 
 type Notification = {
   id: string;
@@ -49,6 +50,7 @@ export default function NotificationsScreen() {
 
   const load = useCallback(async () => {
     if (!profile?.id) return;
+    await ensureOverdueNotifications(profile.id);
     const { data, error } = await supabase
       .from('notification_messages')
       .select('id, type, title, body, read_at, created_at, metadata')
@@ -111,8 +113,11 @@ export default function NotificationsScreen() {
         return 'shopping-cart';
       case 'team_item_added':
         return 'package';
+      case 'overdue':
       case 'overdue_reminder':
-        return 'alert-circle';
+        return 'alert-triangle';
+      case 'due_tomorrow':
+        return 'calendar';
       default:
         return 'bell';
     }
