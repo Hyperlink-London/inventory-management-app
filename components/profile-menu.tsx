@@ -28,6 +28,11 @@ export function ProfileMenu() {
     router.push('/settings');
   };
 
+  const handleNotifications = () => {
+    closeMenu();
+    router.push('/notifications');
+  };
+
   const handleSignOut = () => {
     closeMenu();
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -84,6 +89,16 @@ export function ProfileMenu() {
                   {displayName}
                 </Text>
               </View>
+              <Pressable
+                onPress={handleNotifications}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { backgroundColor: colors.muted },
+                ]}
+              >
+                <Feather name="bell" size={20} color={colors.mutedForeground} />
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Notifications</Text>
+              </Pressable>
               <Pressable
                 onPress={handleSettings}
                 style={({ pressed }) => [

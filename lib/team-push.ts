@@ -74,37 +74,79 @@ export async function sendPushToTokens(
 }
 
 /**
+ * Insert notification_messages for teammates (synced inbox between web and app).
+ */
+async function insertNotificationForTeammates(
+  type: 'team_checkout' | 'team_item_added',
+  title: string,
+  body: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
+
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('supabase_uid', user.id)
+      .is('deleted_at', null)
+      .single();
+
+    const senderProfileId = myProfile?.id;
+    if (!senderProfileId) return;
+
+    const { data: teammateIds, error: rpcError } = await supabase.rpc('get_teammate_profile_ids');
+    if (rpcError || !teammateIds || (Array.isArray(teammateIds) ? teammateIds : [teammateIds]).length === 0) return;
+
+    const ids = Array.isArray(teammateIds) ? teammateIds : [teammateIds];
+    const rows = ids.map((recipientId: string) => ({
+      recipient_profile_id: recipientId,
+      sender_profile_id: senderProfileId,
+      type,
+      title,
+      body,
+      metadata: metadata || {},
+    }));
+
+    await supabase.from('notification_messages').insert(rows);
+  } catch (e) {
+    log.data('insertNotificationForTeammates exception', e);
+  }
+}
+
+/**
  * Notify everyone in the current user's team that someone (the current user) checked out an item.
- * Call after a successful checkout. Sends to teammates only; no-op if user has no team or no teammates have tokens.
+ * Inserts into notification_messages (synced inbox) and sends push. No-op on web.
  */
 export async function notifyTeamCheckout(
   checkerOuterName: string,
   itemName: string
 ): Promise<void> {
   if (Platform.OS === 'web') return;
+  const title = 'Team checkout';
+  const body = `${checkerOuterName} checked out "${itemName}"`;
+  await insertNotificationForTeammates('team_checkout', title, body);
   const tokens = await getTeammatePushTokens();
-  if (tokens.length === 0) return;
-  await sendPushToTokens(
-    tokens,
-    'Team checkout',
-    `${checkerOuterName} checked out "${itemName}"`
-  );
+  if (tokens.length > 0) {
+    await sendPushToTokens(tokens, title, body);
+  }
 }
 
 /**
  * Notify everyone in the current user's team that someone (the current user) added a new item.
- * Call after a successful add. Sends to teammates only; no-op if user has no team or no teammates have tokens.
+ * Inserts into notification_messages (synced inbox) and sends push. No-op on web.
  */
 export async function notifyTeamItemAdded(
   adderName: string,
   itemName: string
 ): Promise<void> {
   if (Platform.OS === 'web') return;
+  const title = 'New item added';
+  const body = `${adderName} added "${itemName}" to the inventory`;
+  await insertNotificationForTeammates('team_item_added', title, body);
   const tokens = await getTeammatePushTokens();
-  if (tokens.length === 0) return;
-  await sendPushToTokens(
-    tokens,
-    'New item added',
-    `${adderName} added "${itemName}" to the inventory`
-  );
+  if (tokens.length > 0) {
+    await sendPushToTokens(tokens, title, body);
+  }
 }

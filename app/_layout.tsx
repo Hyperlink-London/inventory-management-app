@@ -75,6 +75,14 @@ function ProtectedRoutes() {
             headerBackTitle: 'Back',
           }}
         />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            headerShown: true,
+            title: 'Notifications',
+            headerBackTitle: 'Back',
+          }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={!isLoggedIn}>
         <Stack.Screen name="login" />
