@@ -16,7 +16,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rohanzm.inventorymanagementapp"
+      "bundleIdentifier": "com.rohanzm.inventorymanagementapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -38,6 +41,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b1f4791d-f474-42b8-a5a0-c8ae3a801a6e"
+      }
     }
   }
 }

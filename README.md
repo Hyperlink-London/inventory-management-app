@@ -76,11 +76,20 @@ Refer to the source [software-inventory-management](https://github.com/hyperlink
    npx expo start --ios
    ```
 
-   Or for a development build:
+   Or for a development build (native Xcode project):
    ```bash
    npx expo prebuild
    npx expo run:ios
    ```
+
+   **Running from Xcode without Metro** (e.g. `xed ios` then Run):
+   - By default, Xcode uses the **Debug** scheme, which expects the Metro bundler. If Metro isn’t running, you’ll get a “request timed out” / “No script URL provided” error.
+   - To run **without** Metro (bundle embedded in the app):
+     1. In Xcode: **Product → Scheme → Edit Scheme…** (or ⌃⌘S).
+     2. Select **Run** on the left.
+     3. Set **Build Configuration** to **Release** (instead of Debug).
+     4. Close and run with ▶️. The app will load the embedded JS bundle and won’t need `expo start`.
+   - Or from the terminal: `npx expo run:ios --configuration Release` (then you can still attach from Xcode for debugging if needed).
 
 ## Project Structure
 
