@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { supabase } from './supabase';
 import { log } from './logger';
 import type { OverdueCheckoutForInbox } from './data';

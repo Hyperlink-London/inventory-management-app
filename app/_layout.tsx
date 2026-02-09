@@ -1,16 +1,3 @@
-import { LogBox } from 'react-native';
-
-// Suppress expo-notifications Expo Go warnings (we no-op there; use dev build for full support)
-LogBox.ignoreLogs([
-  'expo-notifications',
-  'Android Push notifications',
-  'removed from Expo Go',
-  'not fully supported in Expo Go',
-  'development build',
-  'dev-client',
-  'expo.fyi/dev-client',
-]);
-
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ThemeProvider } from '@react-navigation/native';
 import 'expo-crypto';

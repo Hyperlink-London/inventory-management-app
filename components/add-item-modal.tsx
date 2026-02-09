@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -181,16 +182,23 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
 
   return (
     <Modal visible transparent animationType="slide">
-      <View style={styles.overlay}>
+      <Pressable style={styles.overlay} onPress={Keyboard.dismiss}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>Add Item</Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Text style={styles.cancel}>Cancel</Text>
             </Pressable>
+            <Text style={styles.title}>Add Item</Text>
+            <Pressable onPress={Keyboard.dismiss} hitSlop={12}>
+              <Text style={styles.done}>Done</Text>
+            </Pressable>
           </View>
 
-          <ScrollView style={styles.form}>
+          <ScrollView
+            style={styles.form}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.label}>Name</Text>
             <TextInput
               style={styles.input}
@@ -213,9 +221,14 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
             {imageUri ? (
               <View style={styles.imagePreviewWrap}>
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
-                <Pressable onPress={showImageOptions} style={styles.imageChangeBtn}>
-                  <Text style={styles.imageButtonText}>Change photo</Text>
-                </Pressable>
+                <View style={styles.imageButtonRow}>
+                  <Pressable onPress={showImageOptions} style={styles.imageChangeBtn}>
+                    <Text style={styles.imageButtonText}>Change photo</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setImageUri(null)} style={styles.imageRemoveBtn}>
+                    <Text style={styles.imageRemoveText}>Remove photo</Text>
+                  </Pressable>
+                </View>
               </View>
             ) : (
               <Pressable onPress={showImageOptions} style={styles.imageButton}>
@@ -251,7 +264,7 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
             )}
           </Pressable>
         </View>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
@@ -279,6 +292,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: '700', color: '#111' },
   cancel: { fontSize: 16, color: '#666' },
+  done: { fontSize: 16, color: '#2563eb', fontWeight: '600' },
   form: { padding: 16, maxHeight: 400 },
   label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 6 },
   input: {
@@ -305,10 +319,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  imageChangeBtn: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
+  imageButtonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  imageChangeBtn: { paddingVertical: 8 },
+  imageRemoveBtn: { paddingVertical: 8 },
+  imageRemoveText: { fontSize: 16, color: '#dc2626' },
   submit: {
     marginHorizontal: 16,
     backgroundColor: '#2563eb',

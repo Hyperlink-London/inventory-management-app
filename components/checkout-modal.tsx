@@ -6,8 +6,10 @@ import type { ItemWithTags } from '@/types';
 import { useState } from 'react';
 import {
   Alert,
+  Keyboard,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -71,16 +73,23 @@ export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
 
   return (
     <Modal visible transparent animationType="slide">
-      <View style={styles.overlay}>
+      <Pressable style={styles.overlay} onPress={Keyboard.dismiss}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>Checkout {item.item_name}</Text>
             <Pressable onPress={onClose} hitSlop={12}>
               <Text style={styles.cancel}>Cancel</Text>
             </Pressable>
+            <Text style={styles.title}>Checkout</Text>
+            <Pressable onPress={Keyboard.dismiss} hitSlop={12}>
+              <Text style={styles.done}>Done</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.form}>
+          <ScrollView
+            style={styles.form}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.label}>Quantity (max: {item.quantity})</Text>
             <TextInput
               style={styles.input}
@@ -97,7 +106,7 @@ export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
               onChangeText={setExpectedDate}
               placeholder="YYYY-MM-DD"
             />
-          </View>
+          </ScrollView>
 
           <Pressable
             onPress={handleSubmit}
@@ -109,7 +118,7 @@ export function CheckoutModal({ visible, item, onClose, onSuccess }: Props) {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </Pressable>
     </Modal>
   );
 }
@@ -135,6 +144,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: '700', color: '#111' },
   cancel: { fontSize: 16, color: '#666' },
+  done: { fontSize: 16, color: '#2563eb', fontWeight: '600' },
   form: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 6 },
   input: {
