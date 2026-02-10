@@ -245,12 +245,7 @@ export default function CheckoutsScreen() {
         )}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsScroll}
-        style={styles.tabsScrollView}
-      >
+      <View style={styles.tabsRow}>
         {TAB_CONFIG.filter((tab) => !tab.requiresTeams || normalizedUserTeams.length > 0).map(({ key, label, icon }) => {
           const isTeamTab = key === 'team';
           const onTabPress = () => {
@@ -266,24 +261,24 @@ export default function CheckoutsScreen() {
             >
               <Feather
                 name={icon}
-                size={18}
+                size={16}
                 color={isActive ? colors.text : colors.mutedForeground}
                 style={styles.tabIcon}
               />
               <Text
                 style={[
                   styles.tabText,
-                  styles.tabLabel,
                   { color: isActive ? colors.text : colors.mutedForeground },
                   isActive && styles.tabTextActive,
                 ]}
+                numberOfLines={1}
               >
                 {label}
               </Text>
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
 
       {viewMode === 'team' && normalizedUserTeams.length > 0 && (
         <View style={styles.teamFilterSection}>
@@ -362,7 +357,7 @@ export default function CheckoutsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, paddingHorizontal: 12, paddingVertical: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     marginBottom: 16,
@@ -421,34 +416,24 @@ const styles = StyleSheet.create({
   filterBadgePressed: {
     opacity: 0.7,
   },
-  tabsScrollView: {
-    marginBottom: 20,
-    width: '100%',
-    minHeight: 52,
-  },
-  tabsScroll: {
+  tabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: 8,
-    flexGrow: 0,
-    flexShrink: 0,
+    gap: 4,
+    marginBottom: 16,
   },
   tab: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    flexShrink: 0,
-    minHeight: 44,
   },
-  tabLabel: {
-    flexShrink: 0,
-  },
-  tabIcon: { marginRight: 6 },
+  tabIcon: { marginRight: 4 },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
   },
   tabTextActive: {
     fontWeight: '500',
@@ -465,8 +450,8 @@ const styles = StyleSheet.create({
   },
   teamFilterScroll: {
     flexDirection: 'row',
-    gap: 8,
-    paddingRight: 8,
+    gap: 6,
+    paddingRight: 4,
   },
   teamChip: {
     paddingVertical: 8,
