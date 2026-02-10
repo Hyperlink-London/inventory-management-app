@@ -2,6 +2,7 @@ import { deleteItem, updateItem, createTag } from '@/lib/actions';
 import { supabase } from '@/lib/supabase';
 import { uploadItemImage } from '@/lib/uploadImage';
 import { useDataRefresh } from '@/providers/data-refresh-provider';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TagSelector } from '@/components/tag-selector';
 import type { ItemWithTags } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
@@ -38,6 +39,7 @@ export function EditItemModal({
   onSuccess,
   onDeleted,
 }: Props) {
+  const colors = useThemeColors();
   const { refresh } = useDataRefresh();
   const [name, setName] = useState(item.item_name);
   const [quantity, setQuantity] = useState(String(item.quantity));
@@ -54,11 +56,10 @@ export function EditItemModal({
       setNotes(item.notes || '');
       setTags(item.tags);
       setImageUri(null);
-      // Load available tags
+      // Load available tags (match add-item-modal query)
       supabase
         .from('tags')
         .select('id, name')
-        .is('deleted_at', null)
         .then(({ data }) => {
           setAvailableTags((data as Tag[]) || []);
         });
@@ -254,15 +255,13 @@ export function EditItemModal({
   return (
     <Modal visible transparent animationType="slide">
       <Pressable style={styles.overlay} onPress={Keyboard.dismiss}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
           <View style={styles.header}>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={styles.cancel}>Cancel</Text>
+              <Text style={[styles.cancel, { color: colors.mutedForeground }]}>Cancel</Text>
             </Pressable>
-            <Text style={styles.title}>Edit Item</Text>
-            <Pressable onPress={Keyboard.dismiss} hitSlop={12}>
-              <Text style={styles.done}>Done</Text>
-            </Pressable>
+            <Text style={[styles.title, { color: colors.text }]}>Edit Item</Text>
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
@@ -270,24 +269,26 @@ export function EditItemModal({
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.label}>Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={name}
               onChangeText={setName}
               placeholder="Item name"
+              placeholderTextColor={colors.mutedForeground}
             />
 
-            <Text style={styles.label}>Quantity</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Quantity</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="number-pad"
               placeholder="0"
+              placeholderTextColor={colors.mutedForeground}
             />
 
-            <Text style={styles.label}>Image</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Image</Text>
             {(imageUri || item.image_URL) ? (
               <View style={styles.imagePreviewWrap}>
                 <Image
@@ -297,19 +298,19 @@ export function EditItemModal({
                 />
                 <View style={styles.imageButtonRow}>
                   <Pressable onPress={showImageOptions} style={styles.imageChangeBtn}>
-                    <Text style={styles.imageBtnText}>Change photo</Text>
+                    <Text style={[styles.imageBtnText, { color: colors.mutedForeground }]}>Change photo</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => setImageUri(null)}
                     style={styles.imageRemoveBtn}
                   >
-                    <Text style={styles.imageRemoveText}>Remove photo</Text>
+                    <Text style={[styles.imageRemoveText, { color: colors.destructive }]}>Remove photo</Text>
                   </Pressable>
                 </View>
               </View>
             ) : (
-              <Pressable onPress={showImageOptions} style={styles.imageBtn}>
-                <Text style={styles.imageBtnText}>Take photo or choose from library</Text>
+              <Pressable onPress={showImageOptions} style={[styles.imageBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.imageBtnText, { color: colors.mutedForeground }]}>Take photo or choose from library</Text>
               </Pressable>
             )}
 
@@ -319,12 +320,13 @@ export function EditItemModal({
               onTagsChange={setTags}
             />
 
-            <Text style={styles.label}>Notes</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
             <TextInput
-              style={[styles.input, styles.notes]}
+              style={[styles.input, styles.notes, { borderColor: colors.border, color: colors.text }]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Notes..."
+              placeholderTextColor={colors.mutedForeground}
               multiline
             />
           </ScrollView>
@@ -332,20 +334,20 @@ export function EditItemModal({
           <Pressable
             onPress={handleDelete}
             disabled={submitting}
-            style={[styles.deleteBtn, submitting && styles.btnDisabled]}
+            style={[styles.deleteBtn, { borderColor: colors.destructive }, submitting && styles.btnDisabled]}
           >
-            <Text style={styles.deleteBtnText}>Delete Item</Text>
+            <Text style={[styles.deleteBtnText, { color: colors.destructive }]}>Delete Item</Text>
           </Pressable>
 
           <Pressable
             onPress={handleSave}
             disabled={submitting}
-            style={[styles.submit, submitting && styles.btnDisabled]}
+            style={[styles.submit, { backgroundColor: colors.primary }, submitting && styles.btnDisabled]}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text style={styles.submitText}>Save</Text>
+              <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Save</Text>
             )}
           </Pressable>
         </View>
@@ -361,7 +363,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '90%',
@@ -374,14 +375,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#111' },
-  cancel: { fontSize: 16, color: '#666' },
-  done: { fontSize: 16, color: '#2563eb', fontWeight: '600' },
+  title: { fontSize: 18, fontWeight: '700' },
+  cancel: { fontSize: 16 },
+  headerSpacer: { width: 60 },
   form: { maxHeight: 350, marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -390,16 +390,15 @@ const styles = StyleSheet.create({
   notes: { minHeight: 80, textAlignVertical: 'top' },
   imageBtn: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
-  imageBtnText: { fontSize: 16, color: '#666' },
+  imageBtnText: { fontSize: 16 },
   imagePreviewWrap: { marginBottom: 16 },
   imageButtonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   imageRemoveBtn: { paddingVertical: 8 },
-  imageRemoveText: { fontSize: 14, color: '#dc2626' },
+  imageRemoveText: { fontSize: 14 },
   imagePreview: {
     width: '100%',
     height: 200,
@@ -415,16 +414,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#dc2626',
     marginBottom: 8,
   },
-  deleteBtnText: { fontSize: 16, color: '#dc2626', fontWeight: '600' },
+  deleteBtnText: { fontSize: 16, fontWeight: '600' },
   submit: {
-    backgroundColor: '#2563eb',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   btnDisabled: { opacity: 0.7 },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  submitText: { fontSize: 16, fontWeight: '600' },
 });

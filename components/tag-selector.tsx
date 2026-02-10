@@ -61,7 +61,7 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: Props
     if (canCreateTag) {
       const newTag: Tag = { id: trimmed, name: trimmed };
       addTag(newTag);
-      setModalVisible(false);
+      setSearchQuery('');
     }
   };
 
@@ -94,8 +94,8 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: Props
           onPress={() => setModalVisible(true)}
           style={[styles.addButton, { borderColor: colors.border }]}
         >
-          <Feather name="plus" size={16} color="#111" />
-          <Text style={[styles.addButtonText, { color: '#111' }]}>
+          <Feather name="plus" size={16} color={colors.text} />
+          <Text style={[styles.addButtonText, { color: colors.text }]}>
             Add tags
           </Text>
         </Pressable>
@@ -142,10 +142,7 @@ export function TagSelector({ selectedTags, availableTags, onTagsChange }: Props
               {filteredTags.map((tag) => (
                 <Pressable
                   key={tag.id}
-                  onPress={() => {
-                    addTag(tag);
-                    setModalVisible(false);
-                  }}
+                  onPress={() => addTag(tag)}
                   style={[styles.tagItem, { borderColor: colors.border }]}
                 >
                   <Feather name="tag" size={18} color={colors.mutedForeground} />

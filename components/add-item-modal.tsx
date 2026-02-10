@@ -4,6 +4,7 @@ import { uploadItemImage } from '@/lib/uploadImage';
 import { notifyTeamItemAdded } from '@/lib/team-push';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useDataRefresh } from '@/providers/data-refresh-provider';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { TagSelector } from '@/components/tag-selector';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -31,6 +32,7 @@ type Props = {
 };
 
 export function AddItemModal({ visible, onClose, onSuccess }: Props) {
+  const colors = useThemeColors();
   const { session, profile } = useAuthContext();
   const { refresh } = useDataRefresh();
   const [name, setName] = useState('');
@@ -183,15 +185,13 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
   return (
     <Modal visible transparent animationType="slide">
       <Pressable style={styles.overlay} onPress={Keyboard.dismiss}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={styles.cancel}>Cancel</Text>
+              <Text style={[styles.cancel, { color: colors.mutedForeground }]}>Cancel</Text>
             </Pressable>
-            <Text style={styles.title}>Add Item</Text>
-            <Pressable onPress={Keyboard.dismiss} hitSlop={12}>
-              <Text style={styles.done}>Done</Text>
-            </Pressable>
+            <Text style={[styles.title, { color: colors.text }]}>Add Item</Text>
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
@@ -199,40 +199,42 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.label}>Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={name}
               onChangeText={setName}
               placeholder="Item name"
+              placeholderTextColor={colors.mutedForeground}
               autoCapitalize="words"
             />
 
-            <Text style={styles.label}>Quantity</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Quantity</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
               value={quantity}
               onChangeText={setQuantity}
               placeholder="0"
+              placeholderTextColor={colors.mutedForeground}
               keyboardType="number-pad"
             />
 
-            <Text style={styles.label}>Image</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Image</Text>
             {imageUri ? (
               <View style={styles.imagePreviewWrap}>
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
                 <View style={styles.imageButtonRow}>
                   <Pressable onPress={showImageOptions} style={styles.imageChangeBtn}>
-                    <Text style={styles.imageButtonText}>Change photo</Text>
+                    <Text style={[styles.imageButtonText, { color: colors.mutedForeground }]}>Change photo</Text>
                   </Pressable>
                   <Pressable onPress={() => setImageUri(null)} style={styles.imageRemoveBtn}>
-                    <Text style={styles.imageRemoveText}>Remove photo</Text>
+                    <Text style={[styles.imageRemoveText, { color: colors.destructive }]}>Remove photo</Text>
                   </Pressable>
                 </View>
               </View>
             ) : (
-              <Pressable onPress={showImageOptions} style={styles.imageButton}>
-                <Text style={styles.imageButtonText}>Take photo or choose from library</Text>
+              <Pressable onPress={showImageOptions} style={[styles.imageButton, { borderColor: colors.border }]}>
+                <Text style={[styles.imageButtonText, { color: colors.mutedForeground }]}>Take photo or choose from library</Text>
               </Pressable>
             )}
 
@@ -242,12 +244,13 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
               onTagsChange={setTags}
             />
 
-            <Text style={styles.label}>Notes</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
             <TextInput
-              style={[styles.input, styles.notes]}
+              style={[styles.input, styles.notes, { borderColor: colors.border, color: colors.text }]}
               value={notes}
               onChangeText={setNotes}
               placeholder="Additional details..."
+              placeholderTextColor={colors.mutedForeground}
               multiline
             />
           </ScrollView>
@@ -255,12 +258,12 @@ export function AddItemModal({ visible, onClose, onSuccess }: Props) {
           <Pressable
             onPress={handleSubmit}
             disabled={submitting}
-            style={[styles.submit, submitting && styles.submitDisabled]}
+            style={[styles.submit, { backgroundColor: colors.primary }, submitting && styles.submitDisabled]}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.primaryForeground} />
             ) : (
-              <Text style={styles.submitText}>Add Item</Text>
+              <Text style={[styles.submitText, { color: colors.primaryForeground }]}>Add Item</Text>
             )}
           </Pressable>
         </View>
@@ -276,7 +279,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '90%',
@@ -288,16 +290,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#111' },
-  cancel: { fontSize: 16, color: '#666' },
-  done: { fontSize: 16, color: '#2563eb', fontWeight: '600' },
+  title: { fontSize: 18, fontWeight: '700' },
+  cancel: { fontSize: 16 },
+  headerSpacer: { width: 60 },
   form: { padding: 16, maxHeight: 400 },
-  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -306,12 +306,11 @@ const styles = StyleSheet.create({
   notes: { minHeight: 80, textAlignVertical: 'top' },
   imageButton: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
-  imageButtonText: { fontSize: 16, color: '#666' },
+  imageButtonText: { fontSize: 16 },
   imagePreviewWrap: { marginBottom: 16 },
   imagePreview: {
     width: '100%',
@@ -322,14 +321,13 @@ const styles = StyleSheet.create({
   imageButtonRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   imageChangeBtn: { paddingVertical: 8 },
   imageRemoveBtn: { paddingVertical: 8 },
-  imageRemoveText: { fontSize: 16, color: '#dc2626' },
+  imageRemoveText: { fontSize: 16 },
   submit: {
     marginHorizontal: 16,
-    backgroundColor: '#2563eb',
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   submitDisabled: { opacity: 0.7 },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  submitText: { fontSize: 16, fontWeight: '600' },
 });
